@@ -144,12 +144,7 @@ Pack &BaseDatapath::getPack() {
 }
 
 void BaseDatapath::postDDDGBuild() {
-	// XXX: Changed from old logic that seemed buggish (i.e. numOfTotalNodes had always one more isolated node)
-	// that was read from getTraceLineFromTo()
-	numOfTotalNodes = getNumNodes();
-
-	BGL_FORALL_VERTICES(v, graph, Graph) nameToVertex[boost::get(boost::vertex_index, graph, v)] = v;
-	vertexToName = boost::get(boost::vertex_index, graph);
+	refreshDDDG();
 
 	for(auto &it : PC.getFuncList()) {
 #ifdef LEGACY_SEPARATOR
@@ -161,6 +156,17 @@ void BaseDatapath::postDDDGBuild() {
 
 		functionNames.insert(functionName);
 	}
+}
+
+void BaseDatapath::refreshDDDG() {
+	// XXX: Changed from old logic that seemed buggish (i.e. numOfTotalNodes had always one more isolated node)
+	// that was read from getTraceLineFromTo()
+	numOfTotalNodes = getNumNodes();
+
+	BGL_FORALL_VERTICES(v, graph, Graph) nameToVertex[boost::get(boost::vertex_index, graph, v)] = v;
+	vertexToName = boost::get(boost::vertex_index, graph);
+
+	edgeToWeight = boost::get(boost::edge_weight, graph);
 }
 
 void BaseDatapath::insertMicroop(int microop) {
@@ -197,8 +203,6 @@ void BaseDatapath::initBaseAddress() {
 	const ConfigurationManager::partitionCfgMapTy &partitionMap = CM.getPartitionCfgMap();
 	const ConfigurationManager::partitionCfgMapTy &completePartitionMap = CM.getCompletePartitionCfgMap();
 	const std::unordered_map<int, std::pair<std::string, int64_t>> &getElementPtrMap = PC.getGetElementPtrList();
-
-	edgeToWeight = boost::get(boost::edge_weight, graph);
 
 	VertexIterator vi, viEnd;
 	for(std::tie(vi, viEnd) = vertices(graph); vi != viEnd; vi++) {
@@ -365,7 +369,6 @@ uint64_t BaseDatapath::fpgaEstimation() {
 
 	VERBOSE_PRINT(errs() << "\tGetting hardware-constrained II\n");
 	std::tuple<std::string, uint64_t> resIIOp = profile->calculateResIIOp();
-
 
 	VERBOSE_PRINT(errs() << "\tGetting recurrence-constrained II\n");
 	uint64_t recII = calculateRecII(std::get<0>(asapResult));
@@ -1082,7 +1085,7 @@ void BaseDatapath::alapScheduling(std::tuple<uint64_t, uint64_t> asapResult) {
 
 	alapScheduledTime.assign(numOfTotalNodes, 0);
 
-	std::map<uint64_t, std::vector<unsigned>> minTimesNodesMap;
+	std::map<uint64_t, std::set<unsigned>> minTimesNodesMap;
 #ifdef CHECK_VISITED_NODES
 	std::set<unsigned> visitedNodes;
 #endif
@@ -1118,14 +1121,14 @@ void BaseDatapath::alapScheduling(std::tuple<uint64_t, uint64_t> asapResult) {
 		visitedNodes.insert(nodeID);
 #endif
 
-		minTimesNodesMap[minCurrStartTime].push_back(nodeID);
+		minTimesNodesMap[minCurrStartTime].insert(nodeID);
 	}
 
 	// Calculate required resources for current scheduling, without imposing any restrictions
 	const ConfigurationManager::arrayInfoCfgMapTy &arrayInfoCfgMap = CM.getArrayInfoCfgMap();
 	profile->calculateRequiredResources(microops, arrayInfoCfgMap, baseAddress, minTimesNodesMap);
 
-	std::map<uint64_t, std::vector<unsigned>>().swap(minTimesNodesMap);
+	std::map<uint64_t, std::set<unsigned>>().swap(minTimesNodesMap);
 
 	P.clear();
 	profile->fillPack(P);
@@ -2012,9 +2015,15 @@ void BaseDatapath::RCScheduler::trySelect(nodeTickTy &ready, selectedListTy &sel
 	}
 }
 
-void BaseDatapath::RCScheduler::trySelect(nodeTickTy &ready, selectedListTy &selected, bool (HardwareProfile::*tryAllocateInt)(unsigned, bool)) {
+void BaseDatapath::RCScheduler::trySelect(nodeTickTy &ready, selectedListTy &selected, bool (HardwareProfile::*tryAllocateOp)(int, bool)) {
 	if(ready.size()) {
 		selected.clear();
+
+		// XXX: Please note that if we start constraining these resources (i.e. tryAllocateOp might start returning false),
+		// We should remove the breaks from timing and resource contention. Also, the iterating loop should also be slightly
+		// modified. On the other trySelect() logics, if there is timing contention and/or resource contention for
+		// the first candidate, trySelect() already fails (i.e. the else { break } statements). This is expected
+		// for operations where if one fails, for sure the next one won't be able to succeed.
 
 		// Sort nodes by their ALAP, smallest first (urgent nodes first)
 		ready.sort(prioritiseSmallerALAP);
@@ -2024,14 +2033,14 @@ void BaseDatapath::RCScheduler::trySelect(nodeTickTy &ready, selectedListTy &sel
 
 			// If allocation is successful (i.e. there is one operation unit available), select this operation
 			// If timing-constrained scheduling is enabled, allocation is not yet performed, only attempted
-			if((profile.*tryAllocateInt)(microops.at(nodeID), args.fNoTCS)) {
+			if((profile.*tryAllocateOp)(microops.at(nodeID), args.fNoTCS)) {
 				bool timingConstrained = false;
 
 				// Timing-constrained scheduling (taa-daa)
 				if(!(args.fNoTCS)) {
 					// If selecting the current node does not violate timing in any way, proceed
 					if(tcSched.tryAllocate(nodeID))
-						(profile.*tryAllocateInt)(microops.at(nodeID), true);
+						(profile.*tryAllocateOp)(microops.at(nodeID), true);
 					// Else, fail
 					else
 						timingConstrained = true;
@@ -2138,10 +2147,10 @@ void BaseDatapath::RCScheduler::enqueueExecute(unsigned opcode, selectedListTy &
 	}
 }
 
-void BaseDatapath::RCScheduler::enqueueExecute(selectedListTy &selected, executingMapTy &executing, void (HardwareProfile::*releaseInt)(unsigned)) {
+void BaseDatapath::RCScheduler::enqueueExecute(selectedListTy &selected, executingMapTy &executing, void (HardwareProfile::*releaseOp)(int)) {
 	while(selected.size()) {
 		unsigned selectedNodeID = selected.front();
-		unsigned opcode = microops.at(selectedNodeID);
+		int opcode = microops.at(selectedNodeID);
 		unsigned latency = profile.getLatency(opcode);
 
 		// Latency 0 or 1: this node was solved already. Set as scheduled and assign its children as ready
@@ -2225,12 +2234,12 @@ void BaseDatapath::RCScheduler::tryRelease(unsigned opcode, executingMapTy &exec
 		executing.erase(it);
 }
 
-void BaseDatapath::RCScheduler::tryRelease(executingMapTy &executing, executedListTy &executed, void (HardwareProfile::*releaseInt)(unsigned)) {
+void BaseDatapath::RCScheduler::tryRelease(executingMapTy &executing, executedListTy &executed, void (HardwareProfile::*releaseOp)(int)) {
 	std::vector<unsigned> toErase;
 
 	for(auto &it: executing) {
 		unsigned executingNodeID = it.first;
-		unsigned opcode = microops.at(executingNodeID);
+		int opcode = microops.at(executingNodeID);
 
 		// Check if this node was already accounted in this clock tick. If positive, pass.
 		if(executed.end() == std::find(executed.begin(), executed.end(), executingNodeID))
@@ -2253,7 +2262,7 @@ void BaseDatapath::RCScheduler::tryRelease(executingMapTy &executing, executedLi
 
 			// If operation is pipelined, the resource was already released before
 			if(!(profile.isPipelined(opcode)))
-				(profile.*releaseInt)(opcode);
+				(profile.*releaseOp)(opcode);
 		}
 		else {
 			if(args.showScheduling)

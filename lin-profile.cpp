@@ -68,8 +68,12 @@ const std::string helpMessage =
 	"                   --show-pre-dddg    : dump DDDG before optimisation\n"
 	"                   --show-post-dddg   : dump DDDG after optimisation\n"
 	"                   --show-scheduling  : dump constrained-scheduling\n"
+	"\n"
+	"Analysis enable/disable flags:\n"
 	"                   --f-npla           : enable non-perfect loop analysis\n"
 	"                   --fno-tcs          : disable timing-constrained scheduling\n"
+	"\n"
+	"Lin-Analyzer flags:\n"
 	"                   --fno-sb           : disable store-buffer optimisation\n"
 	"                   --f-slr            : enable shared-load-removal optimisation\n"
 	"                   --fno-slr          : disable shared-load-removal optimisation. If\n"
@@ -94,6 +98,10 @@ uint64_t progressiveTraceInstCount = 0;
 #endif
 
 int main(int argc, char **argv) {
+#ifdef DBG_FILE
+	debugFile.open(DBG_FILE);
+#endif
+
 	parseInputArguments(argc, argv);
 
 	errs() << "░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▒\n";
@@ -157,6 +165,10 @@ int main(int argc, char **argv) {
 
 	// Declare success.
 	Out->keep();
+
+#ifdef DBG_FILE
+	debugFile.close();
+#endif
 
 	return 0;
 }
