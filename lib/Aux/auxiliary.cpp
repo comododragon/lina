@@ -343,7 +343,9 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 			sscanf(i.c_str(), "%*[^,],%[^,],%lu,%zu\n", buff, &totalSize, &wordSize);
 
 			std::string arrayName(buff);
-			appendToArrayInfoCfg(arrayName2MangledNameMap.at(arrayName), totalSize, wordSize);
+			std::map<std::string, std::string>::iterator mangledFound = arrayName2MangledNameMap.find(arrayName);
+			std::string mangledArrayName = (arrayName2MangledNameMap.end() == mangledFound)? arrayName : mangledFound->second;
+			appendToArrayInfoCfg(mangledArrayName, totalSize, wordSize);
 		}
 	}
 	else {
@@ -362,7 +364,9 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 			std::string typeStr(buff);
 			unsigned type = (typeStr.compare("cyclic"))? partitionCfgTy::PARTITION_TYPE_BLOCK : partitionCfgTy::PARTITION_TYPE_CYCLIC;
 			std::string baseAddr(buff2);
-			appendToPartitionCfg(type, arrayName2MangledNameMap.at(baseAddr), size, wordSize, pFactor);
+			std::map<std::string, std::string>::iterator mangledFound = arrayName2MangledNameMap.find(baseAddr);
+			std::string mangledBaseAddr = (arrayName2MangledNameMap.end() == mangledFound)? baseAddr : mangledFound->second;
+			appendToPartitionCfg(type, mangledBaseAddr, size, wordSize, pFactor);
 		}
 	}
 
@@ -373,7 +377,9 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 			sscanf(i.c_str(), "%*[^,],%*[^,],%[^,],%lu\n", buff, &size);
 
 			std::string baseAddr(buff);
-			appendToCompletePartitionCfg(arrayName2MangledNameMap.at(baseAddr), size);
+			std::map<std::string, std::string>::iterator mangledFound = arrayName2MangledNameMap.find(baseAddr);
+			std::string mangledBaseAddr = (arrayName2MangledNameMap.end() == mangledFound)? baseAddr : mangledFound->second;
+			appendToCompletePartitionCfg(mangledBaseAddr, size);
 		}
 	}
 
