@@ -49,6 +49,19 @@ echo -e "\u001b[1m\u001b[92m--> Cloning LINA...\u001b[0m"
 git clone https://github.com/comododragon/lina.git
 mv lina llvm/tools/lina
 
+echo -e "\u001b[1m\u001b[93m--> Lina project is still receiving updates and its latest commit might be unstable\u001b[0m"
+echo -ne "\u001b[1m\u001b[92m--> Do you want to use the last stable version (as presented in the paper, commit cd664af)? [Y/n] \u001b[0m"
+read INPUT
+
+if [ "n" == "$INPUT" ]; then
+	echo -e "\u001b[1m\u001b[92m--> Using latest commit...\u001b[0m"
+else
+	echo -e "\u001b[1m\u001b[92m--> Checking out to commit cd664af...\u001b[0m"
+	cd llvm/tools/lina
+	git checkout cd664af
+	cd ../../..
+fi
+
 echo -e "\u001b[1m\u001b[92m--> Adapting CMAKE files...\u001b[0m"
 sed -i "s/add_llvm_tool_subdirectory(opt)/add_llvm_tool_subdirectory(lina)\nadd_llvm_tool_subdirectory(opt)/g" llvm/tools/CMakeLists.txt
 echo -e "\nset(LLVM_REQUIRES_RTTI 1)" >> llvm/CMakeLists.txt

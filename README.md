@@ -60,6 +60,12 @@ Alternatively, you can change the compiler script (or the ```cmake``` command if
 
 ## Compilation
 
+*** Please note that Lina is still receiving updates and its latest commit might be unstable. To use the last stable version (as presented in the paper), please use commit cd664af: ***
+```
+$ git clone https://github.com/comododragon/lina.git
+$ git checkout cd664af
+```
+
 You can either compile Lina by using the automated compiling script, or manually by following the instructions presented in Section ***Manual Compilation***.
 
 ### Automatic Compilation
