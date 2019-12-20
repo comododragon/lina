@@ -145,12 +145,12 @@ void HardwareProfile::fillPack(Pack &P) {
 	P.addElement<uint64_t>("fDiv units", fDivGetAmount());
 
 	for(auto &it : arrayGetNumOfPartitions()) {
-		P.addDescriptor("Number of partitions for array \"" + mangledName2ArrayNameMap.at(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
-		P.addElement<uint64_t>("Number of partitions for array \"" + mangledName2ArrayNameMap.at(it.first) + "\"", it.second);
+		P.addDescriptor("Number of partitions for array \"" + demangleArrayName(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
+		P.addElement<uint64_t>("Number of partitions for array \"" + demangleArrayName(it.first) + "\"", it.second);
 	}
 	for(auto &it : arrayGetEfficiency()) {
-		P.addDescriptor("Memory efficiency for array \"" + mangledName2ArrayNameMap.at(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_FLOAT);
-		P.addElement<float>("Memory efficiency for array \"" + mangledName2ArrayNameMap.at(it.first) + "\"", it.second);
+		P.addDescriptor("Memory efficiency for array \"" + demangleArrayName(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_FLOAT);
+		P.addElement<float>("Memory efficiency for array \"" + demangleArrayName(it.first) + "\"", it.second);
 	}
 }
 
@@ -463,12 +463,12 @@ unsigned XilinxHardwareProfile::getLatency(unsigned opcode) {
 		case LLVM_IR_Or:
 		case LLVM_IR_Xor:
 		case LLVM_IR_ICmp:
-			return 1;
+			return 0;
 		case LLVM_IR_Br:
 			return 0;
 		case LLVM_IR_IndexAdd:
 		case LLVM_IR_IndexSub:
-			return 1;
+			return 0;
 		case LLVM_IR_Add:
 			return LATENCY_ADD;
 		case LLVM_IR_Sub: 
@@ -852,8 +852,8 @@ void XilinxHardwareProfile::fillPack(Pack &P) {
 	HardwareProfile::fillPack(P);
 
 	for(auto &it : arrayGetUsedBRAM18k()) {
-		P.addDescriptor("Used BRAM18k for array \"" + mangledName2ArrayNameMap.at(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
-		P.addElement<uint64_t>("Used BRAM18k for array \"" + mangledName2ArrayNameMap.at(it.first) + "\"", it.second);
+		P.addDescriptor("Used BRAM18k for array \"" + demangleArrayName(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
+		P.addElement<uint64_t>("Used BRAM18k for array \"" + demangleArrayName(it.first) + "\"", it.second);
 	}
 }
 
@@ -1061,13 +1061,13 @@ unsigned XilinxZCUHardwareProfile::getLatency(unsigned opcode) {
 		case LLVM_IR_Or:
 		case LLVM_IR_Xor:
 		case LLVM_IR_ICmp:
-			return 1;
+			return 0;
 		case LLVM_IR_Br:
 			return 0;
 		case LLVM_IR_IndexAdd:
-			return 1;
+			return 0;
 		case LLVM_IR_IndexSub:
-			return 1;
+			return 0;
 		case LLVM_IR_Add:
 			return effectiveLatencies[LATENCY_ADD].first;
 		case LLVM_IR_Sub: 
