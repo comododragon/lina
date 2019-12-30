@@ -50,15 +50,15 @@ git clone https://github.com/comododragon/lina.git
 mv lina llvm/tools/lina
 
 echo -e "\u001b[1m\u001b[93m--> Lina project is still receiving updates and its latest commit might be unstable\u001b[0m"
-echo -ne "\u001b[1m\u001b[92m--> Do you want to use the last stable version (as presented in the paper, commit d726eeb)? [Y/n] \u001b[0m"
+echo -ne "\u001b[1m\u001b[92m--> Do you want to use the last stable version (as presented in the paper, commit d85c4a4)? [Y/n] \u001b[0m"
 read INPUT
 
 if [ "n" == "$INPUT" ]; then
 	echo -e "\u001b[1m\u001b[92m--> Using latest commit...\u001b[0m"
 else
-	echo -e "\u001b[1m\u001b[92m--> Checking out to commit d726eeb...\u001b[0m"
+	echo -e "\u001b[1m\u001b[92m--> Checking out to commit d85c4a4...\u001b[0m"
 	cd llvm/tools/lina
-	git checkout d726eeb
+	git checkout d85c4a4
 	cd ../../..
 fi
 
