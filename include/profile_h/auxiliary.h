@@ -13,7 +13,7 @@
 
 // Debug file: by activating this macro, a debug file will be available at the PWD after execution
 // you can fill this debug file by using DBG_DUMP
-// #define DBG_FILE "debug.dump"
+//#define DBG_FILE "debug.dump"
 #ifdef DBG_FILE
 extern std::ofstream debugFile;
 #define DBG_DUMP(X) \
@@ -33,7 +33,10 @@ extern std::ofstream debugFile;
 #define PROGRESSIVE_TRACE_CURSOR
 
 // If enabled, sanity checks are performed in the multipath vector
-#define CHECK_MULTIPATH_STATE
+//#define CHECK_MULTIPATH_STATE
+
+// Enable resource contraints for int operations
+//#define CONSTRAIN_INT_OP
 
 #include <fstream>
 #include <list>

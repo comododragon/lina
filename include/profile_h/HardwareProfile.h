@@ -5,11 +5,16 @@
 #include <iostream>
 
 #include "profile_h/auxiliary.h"
+#include "profile_h/opcodes.h"
 
 using namespace llvm;
 
 class HardwareProfile {
 protected:
+#ifdef CONSTRAIN_INT_OP
+	typedef std::unordered_map<unsigned, unsigned> fuCountTy;
+#endif
+
 	const unsigned INFINITE_RESOURCES = 999999999;
 
 	std::map<std::string, std::tuple<uint64_t, uint64_t, size_t>> arrayNameToConfig;
@@ -21,19 +26,39 @@ protected:
 	std::map<std::string, unsigned> arrayPartitionToWritePorts;
 	std::map<std::string, unsigned> arrayPartitionToWritePortsInUse;
 	unsigned fAddCount, fSubCount, fMulCount, fDivCount;
+#ifdef CONSTRAIN_INT_OP
+	fuCountTy intOpCount;
+#endif
 	unsigned unrFAddCount, unrFSubCount, unrFMulCount, unrFDivCount;
+#ifdef CONSTRAIN_INT_OP
+	fuCountTy unrIntOpCount;
+#endif
 	unsigned fAddInUse, fSubInUse, fMulInUse, fDivInUse;
+#ifdef CONSTRAIN_INT_OP
+	fuCountTy intOpInUse;
+#endif
 	unsigned fAddThreshold, fSubThreshold, fMulThreshold, fDivThreshold;
+#ifdef CONSTRAIN_INT_OP
+	fuCountTy intOpThreshold;
+#endif
 	bool isConstrained;
 	bool thresholdSet;
 	std::set<int> limitedBy;
 
 public:
+#ifdef CONSTRAIN_INT_OP
+	// XXX: You can find the definition at lib/Build_DDDG/HardwareProfileParams.cpp
+	static const std::set<unsigned> constrainedIntOps;
+#endif
+
 	enum {
 		LIMITED_BY_FADD,
 		LIMITED_BY_FSUB,
 		LIMITED_BY_FMUL,
-		LIMITED_BY_FDIV
+		LIMITED_BY_FDIV,
+#ifdef CONSTRAIN_INT_OP
+		LIMITED_BY_INTOP
+#endif
 	};
 
 	HardwareProfile();
@@ -72,6 +97,9 @@ public:
 	virtual bool fSubAddUnit(bool commit = true) = 0;
 	virtual bool fMulAddUnit(bool commit = true) = 0;
 	virtual bool fDivAddUnit(bool commit = true) = 0;
+#ifdef CONSTRAIN_INT_OP
+	virtual bool intOpAddUnit(unsigned opcode, bool commit = true) = 0;
+#endif
 
 	unsigned arrayGetNumOfPartitions(std::string arrayName);
 	unsigned arrayGetPartitionReadPorts(std::string partitionName);
@@ -84,6 +112,9 @@ public:
 	unsigned fSubGetAmount() { return fSubCount; }
 	unsigned fMulGetAmount() { return fMulCount; }
 	unsigned fDivGetAmount() { return fDivCount; }
+#ifdef CONSTRAIN_INT_OP
+	unsigned intOpGetAmount(unsigned opcode) { return intOpCount[opcode]; }
+#endif
 
 	bool fAddTryAllocate(bool commit = true);
 	bool fSubTryAllocate(bool commit = true);
@@ -153,6 +184,23 @@ class XilinxHardwareProfile : public HardwareProfile {
 	};
 
 protected:
+#ifdef CONSTRAIN_INT_OP
+	struct fuResourcesTy {
+		unsigned dsp;
+		unsigned ff;
+		unsigned lut;
+		unsigned bram18k;
+
+		fuResourcesTy() : dsp(0), ff(0), lut(0), bram18k(0) { }
+		fuResourcesTy(unsigned dsp, unsigned ff, unsigned lut, unsigned bram18k) : dsp(dsp), ff(ff), lut(lut), bram18k(bram18k) { }
+	};
+
+	typedef std::unordered_map<unsigned, fuResourcesTy> fuResourcesMapTy;
+
+	// XXX: You can find the definitions at lib/Build_DDDG/HardwareProfileParams.cpp
+	static const fuResourcesMapTy intOpStandardResources;
+#endif
+
 	std::map<std::string, unsigned> arrayNameToUsedBRAM18k;
 	unsigned maxDSP, maxFF, maxLUT, maxBRAM18k;
 	unsigned usedDSP, usedFF, usedLUT, usedBRAM18k;
@@ -160,6 +208,9 @@ protected:
 	unsigned fSubDSP, fSubFF, fSubLUT;
 	unsigned fMulDSP, fMulFF, fMulLUT;
 	unsigned fDivDSP, fDivFF, fDivLUT;
+#ifdef CONSTRAIN_INT_OP
+	fuResourcesMapTy intOpResources;
+#endif
 
 public:
 	XilinxHardwareProfile();
@@ -195,6 +246,9 @@ public:
 	bool fSubAddUnit(bool commit = true);
 	bool fMulAddUnit(bool commit = true);
 	bool fDivAddUnit(bool commit = true);
+#ifdef CONSTRAIN_INT_OP
+	bool intOpAddUnit(unsigned opcode, bool commit = true);
+#endif
 
 	unsigned arrayGetMaximumWritePortsPerPartition();
 	std::map<std::string, unsigned> arrayGetUsedBRAM18k() { return arrayNameToUsedBRAM18k; }
@@ -230,7 +284,7 @@ public:
 };
 
 class XilinxZCUHardwareProfile : public XilinxHardwareProfile {
-	enum {
+	/*enum {
 		LATENCY_LOAD,
 		LATENCY_STORE,
 		LATENCY_ADD,
@@ -242,7 +296,7 @@ class XilinxZCUHardwareProfile : public XilinxHardwareProfile {
 		LATENCY_FMUL32,
 		LATENCY_FDIV32,
 		LATENCY_FCMP
-	};
+	};*/
 
 	// XXX: You can find the definitions at lib/Build_DDDG/HardwareProfileParams.cpp
 	/* This map format: {key (the operation being considered), {key (latency for completion), in-cycle latency in ns}} */
