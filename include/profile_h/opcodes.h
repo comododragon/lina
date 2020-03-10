@@ -65,6 +65,20 @@
 #define LLVM_IR_IndexSub            102
 #define LLVM_IR_SilentStore         101
 
+#ifdef BYTE_OPS
+#define LLVM_IR_Add8                103
+#define LLVM_IR_Sub8                104
+#define LLVM_IR_Mul8                105
+#define LLVM_IR_UDiv8               106
+#define LLVM_IR_SDiv8               107
+#define LLVM_IR_And8                108
+#define LLVM_IR_Or8                 109
+#define LLVM_IR_Xor8                110
+#define LLVM_IR_Shl8                111
+#define LLVM_IR_AShr8               112
+#define LLVM_IR_LShr8               113
+#endif
+
 static const std::map<unsigned, std::string> reverseOpcodeMap = {
 	{0, "move"},
 	{1, "ret"},
@@ -128,7 +142,20 @@ static const std::map<unsigned, std::string> reverseOpcodeMap = {
 	{99, "dmaload"},
 	{100, "indexadd"},
 	{102, "indexsub"},
-	{101, "silentstore"}
+	{101, "silentstore"},
+#ifdef BYTE_OPS
+	{103, "add8"},
+	{104, "sub8"},
+	{105, "mul8"},
+	{106, "udiv8"},
+	{107, "sdiv8"},
+	{108, "and8"},
+	{109, "or8"},
+	{110, "xor8"},
+	{111, "shl8"},
+	{112, "ashr8"},
+	{113, "lshr8"}
+#endif
 };
 
 bool isAssociative(unsigned microop);

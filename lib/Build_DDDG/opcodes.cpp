@@ -2,7 +2,11 @@
 #include "profile_h/opcodes.h"
 
 bool isAssociative(unsigned microop) {
+#ifndef BYTE_OPS
 	return LLVM_IR_Add == microop;
+#else
+	return LLVM_IR_Add == microop || LLVM_IR_Add8 == microop;
+#endif
 }
 
 bool isFAssociative(unsigned microop) {
@@ -35,6 +39,19 @@ bool isComputeOp(unsigned microop) {
 		case LLVM_IR_Xor:
 		case LLVM_IR_ICmp:
 		case LLVM_IR_FCmp:
+#ifdef BYTE_OPS
+		case LLVM_IR_Add8:
+		case LLVM_IR_Sub8:
+		case LLVM_IR_Mul8:
+		case LLVM_IR_UDiv8:
+		case LLVM_IR_SDiv8:
+		case LLVM_IR_Shl8:
+		case LLVM_IR_LShr8:
+		case LLVM_IR_AShr8:
+		case LLVM_IR_And8:
+		case LLVM_IR_Or8:
+		case LLVM_IR_Xor8:
+#endif
 			return true;
 		default:
 			return false;
@@ -57,6 +74,14 @@ bool isBitOp(unsigned microop) {
 		case LLVM_IR_And:
 		case LLVM_IR_Or:
 		case LLVM_IR_Xor:
+#ifdef BYTE_OPS
+		case LLVM_IR_Shl8:
+		case LLVM_IR_LShr8:
+		case LLVM_IR_AShr8:
+		case LLVM_IR_And8:
+		case LLVM_IR_Or8:
+		case LLVM_IR_Xor8:
+#endif
 			return true;
 		default:
 			return false;
@@ -102,6 +127,11 @@ bool isMulOp(unsigned microop) {
 		case LLVM_IR_SDiv:
 		case LLVM_IR_URem:
 		case LLVM_IR_SRem:
+#ifdef BYTE_OPS
+		case LLVM_IR_Mul8:
+		case LLVM_IR_UDiv8:
+		case LLVM_IR_SDiv8:
+#endif
 			return true;
 		default:
 			return false;
@@ -109,7 +139,11 @@ bool isMulOp(unsigned microop) {
 }
 
 bool isAddOp(unsigned microop) {
+#ifndef BYTE_OPS
 	return LLVM_IR_Add == microop || LLVM_IR_Sub == microop;
+#else
+	return LLVM_IR_Add == microop || LLVM_IR_Sub == microop || LLVM_IR_Add8 == microop || LLVM_IR_Sub8 == microop;
+#endif
 }
 
 bool isFAddOp(unsigned microop) {

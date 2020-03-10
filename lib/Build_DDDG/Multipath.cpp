@@ -177,6 +177,8 @@ void Multipath::_Multipath() {
 		}
 	}
 
+	dumpSummary();
+
 	VERBOSE_PRINT(errs() << "[][][][multipath] Finished\n");
 
 #ifdef DBG_PRINT_ALL
@@ -267,6 +269,64 @@ void Multipath::recursiveLookup(unsigned currLoopLevel, unsigned finalLoopLevel)
 		}
 
 		return;
+	}
+}
+
+void Multipath::dumpSummary() {
+	*summaryFile << "================================================\n";
+	if(args.fNoTCS)
+		*summaryFile << "Time-constrained scheduling disabled\n";
+	*summaryFile << "Target clock: " << std::to_string(args.frequency) << " MHz\n";
+	*summaryFile << "Clock uncertainty: " << std::to_string(args.uncertainty) << " %\n";
+	*summaryFile << "Target clock period: " << std::to_string(1000 / args.frequency) << " ns\n";
+	*summaryFile << "Effective clock period: " << std::to_string((1000 / args.frequency) - (10 * args.uncertainty / args.frequency)) << " ns\n";
+	*summaryFile << "Achieved clock period: " << P.mergeElements<float>("Achieved period") << " ns\n";
+	*summaryFile << "Loop name: " << loopName << "\n";
+	*summaryFile << "Loop level: " << std::to_string(firstNonPerfectLoopLevel) << "\n";
+
+	*summaryFile << "DDDG type: non-perfect loop nest (more than 1 DDDG)\n";
+
+	*summaryFile << "Total cycles: " << std::to_string(numCycles) << "\n";
+	*summaryFile << "------------------------------------------------\n";
+
+	for(auto &it : P.getStructure()) {
+		std::string name = std::get<0>(it);
+		unsigned mergeType = std::get<1>(it);
+		unsigned type = std::get<2>(it);
+
+		if(Pack::MERGE_EQUAL == mergeType) {
+			if(Pack::TYPE_UNSIGNED == type) {
+				assert("true" == P.mergeElements<uint64_t>(name) && "Merged values from datapaths differ where it should not differ");
+				*summaryFile << name << ": " << std::to_string(P.getElements<uint64_t>(name)[0]) << "\n";
+			}
+			else if(Pack::TYPE_SIGNED == type) {
+				assert("true" == P.mergeElements<int64_t>(name) && "Merged values from datapaths differ where it should not differ");
+				*summaryFile << name << ": " << std::to_string(P.getElements<int64_t>(name)[0]) << "\n";
+			}
+			else if(Pack::TYPE_FLOAT == type) {
+				assert("true" == P.mergeElements<float>(name) && "Merged values from datapaths differ where it should not differ");
+				*summaryFile << name << ": " << std::to_string(P.getElements<float>(name)[0]) << "\n";
+			}
+			else if(Pack::TYPE_STRING == type) {
+				assert("true" == P.mergeElements<std::string>(name) && "Merged values from datapaths differ where it should not differ");
+				*summaryFile << name << ": " << P.getElements<std::string>(name)[0] << "\n";
+			}
+		}
+		else {
+			if(Pack::TYPE_UNSIGNED == type) {
+				*summaryFile << name << ": " << P.mergeElements<uint64_t>(name) << "\n";
+			}
+			else if(Pack::TYPE_SIGNED == type) {
+				*summaryFile << name << ": " << P.mergeElements<int64_t>(name) << "\n";
+			}
+			else if(Pack::TYPE_FLOAT == type) {
+				*summaryFile << name << ": " << P.mergeElements<float>(name) << "\n";
+			}
+			else if(Pack::TYPE_STRING == type) {
+				std::string mergeResult = P.mergeElements<std::string>(name);
+				*summaryFile << name << ": " << (("" == mergeResult)? "none" : mergeResult) << "\n";
+			}
+		}
 	}
 }
 

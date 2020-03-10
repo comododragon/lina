@@ -184,11 +184,12 @@ void ConfigurationManager::appendToCompletePartitionCfg(std::string baseAddr, ui
 	completePartitionCfgMap.insert(std::make_pair(baseAddr, elem));
 }
 
-void ConfigurationManager::appendToArrayInfoCfg(std::string arrayName, uint64_t totalSize, size_t wordSize) {
+void ConfigurationManager::appendToArrayInfoCfg(std::string arrayName, uint64_t totalSize, size_t wordSize, unsigned scope) {
 	arrayInfoCfgTy elem;
 
 	elem.totalSize = totalSize;
 	elem.wordSize = wordSize;
+	elem.scope = scope;
 
 	arrayInfoCfgMap.insert(std::make_pair(arrayName, elem));
 }
@@ -351,10 +352,26 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 			char buff[BUFF_STR_SZ];
 			uint64_t totalSize;
 			size_t wordSize;
-			sscanf(i.c_str(), "%*[^,],%[^,],%lu,%zu\n", buff, &totalSize, &wordSize);
+			char buff2[BUFF_STR_SZ];
+
+			int retVal = sscanf(i.c_str(), "%*[^,],%[^,],%lu,%zu,%[^,]\n", buff, &totalSize, &wordSize, buff2);
 
 			std::string arrayName(buff);
-			appendToArrayInfoCfg(mangleArrayName(arrayName), totalSize, wordSize);
+			unsigned scope = arrayInfoCfgTy::ARRAY_SCOPE_ARG;
+			if(retVal > 3) {
+				std::string scopeStr(buff2);
+#if 0
+				if("rovar" == scopeStr)
+					scope = arrayInfoCfgTy::ARRAY_SCOPE_ROVAR;
+				else if("rwvar" == scopeStr)
+					scope = arrayInfoCfgTy::ARRAY_SCOPE_RWVAR;
+#else
+				// For compatibility, we also accept "rovar" and "rwvar" which are mapped to "var"
+				if("var" == scopeStr || "rovar" == scopeStr || "rwvar" == scopeStr)
+					scope = arrayInfoCfgTy::ARRAY_SCOPE_VAR;
+#endif
+			}
+			appendToArrayInfoCfg(mangleArrayName(arrayName), totalSize, wordSize, scope);
 		}
 	}
 	else {
@@ -433,8 +450,23 @@ void ConfigurationManager::parseToFiles() {
 	outFile.close();
 
 	outFile.open(arrayInfoFileName);
-	for(auto &it : arrayInfoCfgMap)
-		outFile << "array," << it.first << "," << std::to_string(it.second.totalSize) << "," << std::to_string(it.second.wordSize) << "\n";
+	for(auto &it : arrayInfoCfgMap) {
+		std::string scope;
+#if 0
+		if(arrayInfoCfgTy::ARRAY_SCOPE_ROVAR == it.second.scope)
+			scope = "rovar";
+		else if(arrayInfoCfgTy::ARRAY_SCOPE_RWVAR == it.second.scope)
+			scope = "rwvar";
+		else
+			scope = "arg";
+#else
+		if(arrayInfoCfgTy::ARRAY_SCOPE_VAR == it.second.scope)
+			scope = "var";
+		else
+			scope = "arg";
+#endif
+		outFile << "array," << it.first << "," << std::to_string(it.second.totalSize) << "," << std::to_string(it.second.wordSize) << "," << scope << "\n";
+	}
 	outFile.close();
 }
 

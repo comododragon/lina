@@ -13,7 +13,7 @@
 
 // Debug file: by activating this macro, a debug file will be available at the PWD after execution
 // you can fill this debug file by using DBG_DUMP
-//#define DBG_FILE "debug.dump"
+#define DBG_FILE "debug.dump"
 #ifdef DBG_FILE
 extern std::ofstream debugFile;
 #define DBG_DUMP(X) \
@@ -33,10 +33,13 @@ extern std::ofstream debugFile;
 #define PROGRESSIVE_TRACE_CURSOR
 
 // If enabled, sanity checks are performed in the multipath vector
-//#define CHECK_MULTIPATH_STATE
+#define CHECK_MULTIPATH_STATE
 
 // Enable resource contraints for int operations
-//#define CONSTRAIN_INT_OP
+#define CONSTRAIN_INT_OP
+
+// Enable byte operations: int ops that are identified with result of 8-bits are allocated to 8-bit FUs
+//#define BYTE_OPS
 
 #include <fstream>
 #include <list>
@@ -151,8 +154,18 @@ public:
 	};
 	typedef std::unordered_map<std::string, partitionCfgTy> partitionCfgMapTy;
 	struct arrayInfoCfgTy {
+		enum {
+			ARRAY_SCOPE_ARG,
+#if 0
+			ARRAY_SCOPE_ROVAR,
+			ARRAY_SCOPE_RWVAR
+#else
+			ARRAY_SCOPE_VAR
+#endif
+		};
 		uint64_t totalSize;
 		size_t wordSize;
+		unsigned scope;
 	};
 	typedef std::map<std::string, arrayInfoCfgTy> arrayInfoCfgMapTy;
 
@@ -172,7 +185,7 @@ private:
 	void appendToUnrollingCfg(std::string funcName, unsigned loopNo, unsigned loopLevel, int lineNo, uint64_t unrollFactor);
 	void appendToPartitionCfg(unsigned type, std::string baseAddr, uint64_t size, size_t wordSize, uint64_t pFactor);
 	void appendToCompletePartitionCfg(std::string baseAddr, uint64_t size);
-	void appendToArrayInfoCfg(std::string arrayName, uint64_t totalSize, size_t wordSize);
+	void appendToArrayInfoCfg(std::string arrayName, uint64_t totalSize, size_t wordSize, unsigned scope = arrayInfoCfgTy::ARRAY_SCOPE_ARG);
 
 public:
 	ConfigurationManager(std::string kernelName);
