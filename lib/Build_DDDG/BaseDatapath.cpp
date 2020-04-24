@@ -2002,6 +2002,12 @@ void BaseDatapath::RCScheduler::pushReady(unsigned nodeID, uint64_t tick) {
 		case LLVM_IR_AShr8:
 		case LLVM_IR_LShr8:
 #endif
+#ifdef CUSTOM_OPS
+		case LLVM_IR_APAdd:
+		case LLVM_IR_APSub:
+		case LLVM_IR_APMul:
+		case LLVM_IR_APDiv:
+#endif
 #endif
 			intOpReady.push_back(std::make_pair(nodeID, tick));
 			break;
@@ -2553,6 +2559,13 @@ template<class VE> void BaseDatapath::ColorWriter::operator()(std::ostream &out,
 		}
 
 		int op = opcodes.at(nodeID);
+
+#ifdef CUSTOM_OPS
+		if(isCustomOp(op)) {
+			out << "[" << colorString << " label=\"{" << nodeID << " | " << reverseOpcodeMap.at(op) << "}\"]";
+		}
+		else
+#endif
 		if(isBranchOp(op)) {
 			out << "[style=filled " << colorString << " label=\"{" << nodeID << " | br}\"]";
 		}

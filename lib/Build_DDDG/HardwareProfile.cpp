@@ -696,6 +696,12 @@ bool XilinxHardwareProfile::isPipelined(unsigned opcode) {
 		case LLVM_IR_AShr8:
 		case LLVM_IR_LShr8:
 #endif
+#ifdef CUSTOM_OPS
+		case LLVM_IR_APAdd:
+		case LLVM_IR_APSub:
+		case LLVM_IR_APMul:
+		case LLVM_IR_APDiv:
+#endif
 #endif
 			return true;
 		// XXX: fCmp, integer ops and call are here but because we are not constraining those resources!
@@ -726,7 +732,7 @@ bool XilinxHardwareProfile::canBeLiveOp(unsigned opcode) {
 		case LLVM_IR_Shl:
 		case LLVM_IR_AShr:
 		case LLVM_IR_LShr:
-#if BYTE_OPS
+#ifdef BYTE_OPS
 		case LLVM_IR_Add8:
 		case LLVM_IR_Sub8:
 		case LLVM_IR_Mul8:
@@ -738,6 +744,12 @@ bool XilinxHardwareProfile::canBeLiveOp(unsigned opcode) {
 		case LLVM_IR_Shl8:
 		case LLVM_IR_AShr8:
 		case LLVM_IR_LShr8:
+#endif
+#ifdef CUSTOM_OPS
+		case LLVM_IR_APAdd:
+		case LLVM_IR_APSub:
+		case LLVM_IR_APMul:
+		case LLVM_IR_APDiv:
 #endif
 #endif
 			return true;
@@ -961,7 +973,7 @@ void XilinxHardwareProfile::setMemoryCurrentUsage(
 					arrayNameToEfficiency.insert(std::make_pair(arrayName, efficiencyPerPartition));
 				}
 				else {
-#if 0
+#if 1
 					// For ROM: (1 * wordSizeInBytes * 8)
 					// For RAM: (2 * wordSizeInBytes * 8)
 					unsigned scopeFactor = (ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ROVAR == scope)? 1 : 2;
@@ -1424,6 +1436,12 @@ unsigned XilinxZCUHardwareProfile::getLatency(unsigned opcode) {
 		case LLVM_IR_AShr8:
 		case LLVM_IR_LShr8:
 #endif
+#ifdef CUSTOM_OPS
+		case LLVM_IR_APAdd:
+		case LLVM_IR_APSub:
+		case LLVM_IR_APMul:
+		case LLVM_IR_APDiv:
+#endif
 #ifdef CONSTRAIN_INT_OP
 			return effectiveLatencies[opcode].first;
 #endif
@@ -1496,6 +1514,12 @@ double XilinxZCUHardwareProfile::getInCycleLatency(unsigned opcode) {
 		case LLVM_IR_Shl8:
 		case LLVM_IR_AShr8:
 		case LLVM_IR_LShr8:
+#endif
+#ifdef CUSTOM_OPS
+		case LLVM_IR_APAdd:
+		case LLVM_IR_APSub:
+		case LLVM_IR_APMul:
+		case LLVM_IR_APDiv:
 #endif
 #ifdef CONSTRAIN_INT_OP
 			return effectiveLatencies[opcode].second;

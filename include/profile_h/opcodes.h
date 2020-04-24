@@ -79,6 +79,20 @@
 #define LLVM_IR_LShr8               113
 #endif
 
+#ifdef CUSTOM_OPS
+#define LLVM_IR_APAdd 114
+#define LLVM_IR_APSub 115
+#define LLVM_IR_APMul 116
+#define LLVM_IR_APDiv 117
+
+static const std::unordered_map<std::string, unsigned> customOpsMap = {
+	{"AP_ADD", LLVM_IR_APAdd},
+	{"AP_SUB", LLVM_IR_APSub},
+	{"AP_MUL", LLVM_IR_APMul},
+	{"AP_DIV", LLVM_IR_APDiv}
+};
+#endif
+
 static const std::map<unsigned, std::string> reverseOpcodeMap = {
 	{0, "move"},
 	{1, "ret"},
@@ -154,7 +168,13 @@ static const std::map<unsigned, std::string> reverseOpcodeMap = {
 	{110, "xor8"},
 	{111, "shl8"},
 	{112, "ashr8"},
-	{113, "lshr8"}
+	{113, "lshr8"},
+#endif
+#ifdef CUSTOM_OPS
+	{114, "AP_ADD"},
+	{115, "AP_SUB"},
+	{116, "AP_MUL"},
+	{117, "AP_DIV"}
 #endif
 };
 
@@ -181,5 +201,8 @@ bool isFMulOp(unsigned microop);
 bool isFDivOp(unsigned microop);
 bool isFCmpOp(unsigned microop);
 bool isFloatOp(unsigned microop);
+#ifdef CUSTOM_OPS
+bool isCustomOp(unsigned microop);
+#endif
 
 #endif

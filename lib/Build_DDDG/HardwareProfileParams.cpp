@@ -133,6 +133,30 @@ LLVM_IR_Shl8/LLVM_IR_AShr8/LLVM_IR_LShr8:
 	+ ---------- + ---------- + ---------- + ---------- +
 	|          1 |       0.74 |          0 |         16 |
 	+ ---------- + ---------- + ---------- + ---------- +
+LLVM_IR_APAdd/LLVM_IR_APSub:
+	+ ---------- + ---------- + ---------- + ---------- +
+	|    latency |      delay |         FF |        LUT |
+	+ ---------- + ---------- + ---------- + ---------- +
+	|          1 |       2.26 |          0 |        384 |
+	|          2 |       1.12 |        580 |        130 |
+	+ ---------- + ---------- + ---------- + ---------- +
+LLVM_IR_APMul:
+	+ ---------- + ---------- + ---------- + ---------- + ---------- +
+	|    latency |      delay |     DSP48E |         FF |        LUT |
+	+ ---------- + ---------- + ---------- + ---------- + ---------- +
+	|          1 |       55.3 |        497 |          0 |       9296 |
+	|          2 |       3.68 |         16 |        361 |        178 |
+	|          3 |       3.41 |         16 |        362 |        178 |
+	| xxxxxxxxxx | xxxxxxxxxx | xxxxxxxxxx | xxxxxxxxxx | xxxxxxxxxx |
+	|          5 |       2.61 |         16 |        441 |        249 |
+	|          6 |       1.81 |         16 |        527 |        179 |
+	+ ---------- + ---------- + ---------- + ---------- + ---------- +
+LLVM_IR_APDiv:
+	+ ---------- + ---------- + ---------- + ---------- +
+	|    latency |      delay |         FF |        LUT |
+	+ ---------- + ---------- + ---------- + ---------- +
+	|        388 |       1.56 |        779 |        469 |
+	+ ---------- + ---------- + ---------- + ---------- +
 */
 
 #ifdef CONSTRAIN_INT_OP
@@ -161,6 +185,12 @@ const std::set<unsigned> HardwareProfile::constrainedIntOps = {
 	LLVM_IR_AShr8,
 	LLVM_IR_LShr8,
 #endif
+#ifdef CUSTOM_OPS
+	LLVM_IR_APAdd,
+	LLVM_IR_APSub,
+	LLVM_IR_APMul,
+	LLVM_IR_APDiv
+#endif
 };
 
 const std::unordered_map<unsigned, XilinxHardwareProfile::fuResourcesTy> XilinxHardwareProfile::intOpStandardResources {
@@ -187,6 +217,12 @@ const std::unordered_map<unsigned, XilinxHardwareProfile::fuResourcesTy> XilinxH
 	{LLVM_IR_Shl8, fuResourcesTy(0, 0, 16, 0)},
 	{LLVM_IR_AShr8, fuResourcesTy(0, 0, 16, 0)},
 	{LLVM_IR_LShr8, fuResourcesTy(0, 0, 16, 0)},
+#endif
+#ifdef CUSTOM_OPS
+	{LLVM_IR_APAdd, fuResourcesTy(0, 0, 384, 0)},
+	{LLVM_IR_APSub, fuResourcesTy(0, 0, 384, 0)},
+	{LLVM_IR_APMul, fuResourcesTy(16, 361, 178, 0)},
+	{LLVM_IR_APDiv, fuResourcesTy(0, 779, 469, 0)},
 #endif
 };
 #endif
@@ -227,6 +263,12 @@ const std::unordered_map<unsigned, std::map<unsigned, double>> XilinxZCUHardware
 	{LLVM_IR_AShr8, {{1, 0.74}}},
 	{LLVM_IR_LShr8, {{1, 0.74}}},
 #endif
+#ifdef CUSTOM_OPS
+	{LLVM_IR_APAdd, {{1, 2.26}, {2, 1.12}}},
+	{LLVM_IR_APSub, {{1, 2.26}, {2, 1.12}}},
+	{LLVM_IR_APMul, {{1, 55.3}, {2, 3.68}, {3, 3.41}, {5, 2.61}, {6, 1.81}}},
+	{LLVM_IR_APDiv, {{388, 1.56}}},
+#endif
 #endif
 };
 const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwareProfile::timeConstrainedDSPs = {
@@ -260,6 +302,12 @@ const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwa
 	{LLVM_IR_Shl8, {{1, 0}}},
 	{LLVM_IR_AShr8, {{1, 0}}},
 	{LLVM_IR_LShr8, {{1, 0}}},
+#endif
+#ifdef CUSTOM_OPS
+	{LLVM_IR_APAdd, {{1, 0}, {2, 0}}},
+	{LLVM_IR_APSub, {{1, 0}, {2, 0}}},
+	{LLVM_IR_APMul, {{1, 497}, {2, 16}, {3, 16}, {5, 16}, {6, 16}}},
+	{LLVM_IR_APDiv, {{388, 0}}},
 #endif
 #endif
 };
@@ -295,6 +343,12 @@ const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwa
 	{LLVM_IR_AShr8, {{1, 0}}},
 	{LLVM_IR_LShr8, {{1, 0}}},
 #endif
+#ifdef CUSTOM_OPS
+	{LLVM_IR_APAdd, {{1, 0}, {2, 580}}},
+	{LLVM_IR_APSub, {{1, 0}, {2, 580}}},
+	{LLVM_IR_APMul, {{1, 0}, {2, 361}, {3, 362}, {5, 441}, {6, 527}}},
+	{LLVM_IR_APDiv, {{388, 779}}},
+#endif
 #endif
 };
 const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwareProfile::timeConstrainedLUTs = {
@@ -328,6 +382,12 @@ const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwa
 	{LLVM_IR_Shl8, {{1, 16}}},
 	{LLVM_IR_AShr8, {{1, 16}}},
 	{LLVM_IR_LShr8, {{1, 16}}},
+#endif
+#ifdef CUSTOM_OPS
+	{LLVM_IR_APAdd, {{1, 384}, {2, 130}}},
+	{LLVM_IR_APSub, {{1, 384}, {2, 130}}},
+	{LLVM_IR_APMul, {{1, 9296}, {2, 178}, {3, 178}, {5, 249}, {6, 179}}},
+	{LLVM_IR_APDiv, {{388, 469}}},
 #endif
 #endif
 };

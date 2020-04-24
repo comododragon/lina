@@ -39,7 +39,12 @@ extern std::ofstream debugFile;
 #define CONSTRAIN_INT_OP
 
 // Enable byte operations: int ops that are identified with result of 8-bits are allocated to 8-bit FUs
+// (requires CONSTRAIN_INT_OP)
 //#define BYTE_OPS
+
+// Enable custom ops: specific tagged calls are converted to functional units directly according to internal Lina structures
+// (requires CONSTRAIN_INT_OP)
+#define CUSTOM_OPS
 
 #include <fstream>
 #include <list>
@@ -156,7 +161,7 @@ public:
 	struct arrayInfoCfgTy {
 		enum {
 			ARRAY_SCOPE_ARG,
-#if 0
+#if 1
 			ARRAY_SCOPE_ROVAR,
 			ARRAY_SCOPE_RWVAR
 #else

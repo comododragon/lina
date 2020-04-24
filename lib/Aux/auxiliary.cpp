@@ -360,7 +360,7 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 			unsigned scope = arrayInfoCfgTy::ARRAY_SCOPE_ARG;
 			if(retVal > 3) {
 				std::string scopeStr(buff2);
-#if 0
+#if 1
 				if("rovar" == scopeStr)
 					scope = arrayInfoCfgTy::ARRAY_SCOPE_ROVAR;
 				else if("rwvar" == scopeStr)
@@ -452,7 +452,7 @@ void ConfigurationManager::parseToFiles() {
 	outFile.open(arrayInfoFileName);
 	for(auto &it : arrayInfoCfgMap) {
 		std::string scope;
-#if 0
+#if 1
 		if(arrayInfoCfgTy::ARRAY_SCOPE_ROVAR == it.second.scope)
 			scope = "rovar";
 		else if(arrayInfoCfgTy::ARRAY_SCOPE_RWVAR == it.second.scope)

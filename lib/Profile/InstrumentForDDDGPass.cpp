@@ -342,6 +342,12 @@ int InstrumentForDDDG::shouldTrace(std::string call) {
 			return TRACE_INTRINSIC;
 	}
 
+#ifdef CUSTOM_OPS
+	std::unordered_map<std::string, unsigned>::const_iterator found = customOpsMap.find(call);
+	if(found != customOpsMap.end())
+		return TRACE_CUSTOM_OP;
+#endif
+
 	return NOT_TRACE;
 }
 
@@ -630,6 +636,11 @@ bool InstrumentForDDDG::performOnBasicBlock(BasicBlock &BB) {
 			stRes = shouldTrace(I->getCalledFunction()->getName());
 			if(NOT_TRACE == stRes)
 				continue;
+
+#ifdef CUSTOM_OPS
+			if(TRACE_CUSTOM_OP == stRes)
+				opcode = customOpsMap.at(I->getCalledFunction()->getName());
+#endif
 		}
 
 		int numOfOperands = it->getNumOperands();
@@ -709,6 +720,35 @@ bool InstrumentForDDDG::performOnBasicBlock(BasicBlock &BB) {
 				for(int i = numOfOperands - 1; i >= 0; i--) {
 					currOperand = it->getOperand(i);
 					isReg = currOperand->hasName();
+
+#ifdef CUSTOM_OPS
+					// If this operand is a custom op call, we have different handling
+					if(TRACE_CUSTOM_OP == stRes) {
+						// The last argument is the function called, not interesting for us
+						if(numOfOperands - 1 == i)
+							continue;
+
+#if 0
+						// TODO: Maybe we will have to create a map to say if a custom op has a return or not.
+						// If not, there is no special treatment for operand 0
+						// The first argument will be transformed to return value
+						if(!i) {
+							isReg = true;
+							if(it->getType()->isVectorTy()) {
+								IJ.injectTrace(nextIt, RESULT_LINE, instID, currOperand->getType(), nullptr, isReg);
+							}
+							else if(it->isTerminator()) {
+								// XXX: put a silent warning or fail assert?
+							}
+							else {
+								IJ.injectTrace(nextIt, RESULT_LINE, instID, currOperand->getType(), currOperand, isReg);
+							}
+
+							continue;
+						}
+#endif
+					}
+#endif
 
 					// Input is an instruction
 					if(Instruction *I = dyn_cast<Instruction>(currOperand)) {
