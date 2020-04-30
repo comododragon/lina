@@ -161,7 +161,6 @@ void Injector::initialise(Module &M, TraceLogger &TL) {
 }
 
 void Injector::injectTraceHeader(BasicBlock::iterator it, int lineNo, std::string funcID, std::string bbID, std::string instID, int opcode) {
-	//LLVMContext &C = M->getContext();
 	IRBuilder<> IRB(it);
 
 	// Create LLVM values for the provided arguments

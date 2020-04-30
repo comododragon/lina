@@ -1077,9 +1077,18 @@ std::tuple<uint64_t, uint64_t> BaseDatapath::asapScheduling() {
 		// Evaluate all incoming edges. Save the largest incoming time considering scheduled time of parents + the edge weight
 		for(std::tie(inEdgei, inEdgeEnd) = boost::in_edges(currNode, graph); inEdgei != inEdgeEnd; inEdgei++) {
 			unsigned parentNodeID = vertexToName[boost::source(*inEdgei, graph)];
+			unsigned parentOpcode = microops.at(parentNodeID);
 #ifdef CHECK_VISITED_NODES
 			assert(visitedNodes.find(parentNodeID) != visitedNodes.end() && "Node was not yet visited!");
 #endif
+
+			// Inherit dependability from parents
+			inheritLoadDepMap(nodeID, parentNodeID);
+			inheritStoreDepMap(nodeID, parentNodeID);
+			// If parent operation is a header for memory access operation, save this information
+			if(LLVM_IR_Load == parentOpcode) addToLoadDepMap(nodeID, parentNodeID);
+			if(LLVM_IR_Store == parentOpcode) addToStoreDepMap(nodeID, parentNodeID);
+
 			unsigned currNodeStartTime = asapScheduledTime[parentNodeID] + edgeToWeight[*inEdgei];
 			if(currNodeStartTime > maxCurrStartTime)
 				maxCurrStartTime = currNodeStartTime;
@@ -1240,15 +1249,20 @@ std::pair<uint64_t, double> BaseDatapath::rcScheduling() {
 }
 
 std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMem() {
-	const std::map<std::string, std::tuple<uint64_t, uint64_t, uint64_t, unsigned>> &arrayConfig = profile->arrayGetConfig();
-	std::map<std::string, bool> arrayPartitionToPreviousSchedReadAssigned;
-	std::map<std::string, bool> arrayPartitionToPreviousSchedWriteAssigned;
-	std::map<std::string, uint64_t> arrayPartitionToPreviousSchedRead;
-	std::map<std::string, uint64_t> arrayPartitionToPreviousSchedWrite;
-	std::map<std::string, uint64_t> arrayPartitionToResII;
-	std::map<std::string, std::vector<uint64_t>> arrayPartitionToSchedReadDiffs;
-	std::map<std::string, std::vector<uint64_t>> arrayPartitionToSchedWriteDiffs;
+	// New calculation of ResIIMem is based on two new values:
+	// - ResIIMemPort: port-related minimum II constraint
+	// - ResIIMemRec: minimum II constrained by memory interface recurrence
 
+	std::tuple<std::string, uint64_t> resIIMemPort = calculateResIIMemPort();
+	std::tuple<std::string, uint64_t> resIIMemRec = calculateResIIMemRec();
+
+	return (std::get<1>(resIIMemPort) > std::get<1>(resIIMemRec))? resIIMemPort : resIIMemRec;
+}
+
+std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMemPort() {
+	const ConfigurationManager::arrayInfoCfgMapTy arrayInfoCfgMap = CM.getArrayInfoCfgMap();
+	const std::map<std::string, std::tuple<uint64_t, uint64_t, uint64_t, unsigned>> &arrayConfig = profile->arrayGetConfig();
+	std::map<std::string, uint64_t> arrayPartitionToResII;
 	arrayPartitionToNumOfReads.clear();
 	arrayPartitionToNumOfWrites.clear();
 
@@ -1264,15 +1278,11 @@ std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMem() {
 #else
 				std::string arrayPartitionName = arrayName + GLOBAL_SEPARATOR + std::to_string(i);
 #endif
-				arrayPartitionToPreviousSchedReadAssigned.insert(std::make_pair(arrayPartitionName, false));
-				arrayPartitionToPreviousSchedWriteAssigned.insert(std::make_pair(arrayPartitionName, false));
 				arrayPartitionToResII.insert(std::make_pair(arrayPartitionName, 0));
 			}
 		}
 		// Complete or no partitioning
 		else {
-			arrayPartitionToPreviousSchedReadAssigned.insert(std::make_pair(arrayName, false));
-			arrayPartitionToPreviousSchedWriteAssigned.insert(std::make_pair(arrayName, false));
 			arrayPartitionToResII.insert(std::make_pair(arrayName, 0));
 		}
 	}
@@ -1285,16 +1295,18 @@ std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMem() {
 		rcToNodes[rcScheduledTime[nodeID]].push_back(nodeID);
 	}
 
+	// XXX: Without calculating the load/store distances, we could
+	// transform this loop to something simpler and remove the previous loop
 	for(auto &it : rcToNodes) {
-		uint64_t currentSched = it.first;
+		//uint64_t currentSched = it.first;
 
 		for(auto &it2 : it.second) {
 			unsigned opcode = microops.at(it2);
 
-			if(!isMemoryOp(opcode))
+			if(!(isMemoryOp(opcode)))
 				continue;
 
-			// From this point only loads and stores are considered
+			// From this point only loads and stores are considered (including offchip!)
 
 			std::string partitionName = baseAddress.at(it2).first;
 #ifdef LEGACY_SEPARATOR
@@ -1305,40 +1317,18 @@ std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMem() {
 
 			if(isLoadOp(opcode)) {
 				// Complete partitioning, no need to analyse
-				if(!std::get<0>(arrayConfig.at(arrayName)))
+				if(!(std::get<0>(arrayConfig.at(arrayName))))
 					continue;
 
 				arrayPartitionToNumOfReads[partitionName]++;
-
-				if(!arrayPartitionToPreviousSchedReadAssigned[partitionName]) {
-					arrayPartitionToPreviousSchedRead[partitionName] = currentSched;
-					arrayPartitionToPreviousSchedReadAssigned[partitionName] = true;
-				}
-
-				uint64_t prevSchedRead = arrayPartitionToPreviousSchedRead[partitionName];
-				if(prevSchedRead != currentSched) {
-					arrayPartitionToSchedReadDiffs[partitionName].push_back(currentSched - prevSchedRead);
-					arrayPartitionToPreviousSchedRead[partitionName] = currentSched;
-				}
 			}
 
 			if(isStoreOp(opcode)) {
 				// Complete partitioning, no need to analyse
-				if(!std::get<0>(arrayConfig.at(arrayName)))
+				if(!(std::get<0>(arrayConfig.at(arrayName))))
 					continue;
 
 				arrayPartitionToNumOfWrites[partitionName]++;
-
-				if(!arrayPartitionToPreviousSchedWriteAssigned[partitionName]) {
-					arrayPartitionToPreviousSchedWrite[partitionName] = currentSched;
-					arrayPartitionToPreviousSchedWriteAssigned[partitionName] = true;
-				}
-
-				uint64_t prevSchedWrite = arrayPartitionToPreviousSchedWrite[partitionName];
-				if(prevSchedWrite != currentSched) {
-					arrayPartitionToSchedWriteDiffs[partitionName].push_back(currentSched - prevSchedWrite);
-					arrayPartitionToPreviousSchedWrite[partitionName] = currentSched;
-				}
 			}
 		}
 	}
@@ -1353,9 +1343,7 @@ std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMem() {
 			uint64_t numReads = found->second;
 			uint64_t numReadPorts = profile->arrayGetPartitionReadPorts(partitionName);
 
-			std::map<std::string, std::vector<uint64_t>>::iterator found2 = arrayPartitionToSchedReadDiffs.find(partitionName);
-			if(found2 != arrayPartitionToSchedReadDiffs.end())
-				readII = std::ceil(numReads / (double) numReadPorts);
+			readII = std::ceil(numReads / (double) numReadPorts);
 		}
 
 		// Analyse for write
@@ -1365,25 +1353,175 @@ std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMem() {
 			uint64_t numWrites = found3->second;
 			uint64_t numWritePorts = profile->arrayGetPartitionWritePorts(partitionName);
 
-			std::map<std::string, std::vector<uint64_t>>::iterator found4 = arrayPartitionToSchedWriteDiffs.find(partitionName);
-			if(found4 != arrayPartitionToSchedWriteDiffs.end()) {
-				uint64_t minDiff = *(std::min_element(arrayPartitionToSchedWriteDiffs[partitionName].begin(), arrayPartitionToSchedWriteDiffs[partitionName].end()));
-				writeII = std::ceil((numWrites * minDiff) / (double) numWritePorts);
-			}
-			else {
-				writeII = std::ceil(numWrites / (double) numWritePorts);
-			}
+			writeII = std::ceil(numWrites / (double) numWritePorts);
 		}
 
 		it.second = (readII > writeII)? readII : writeII;
 	}
 
-	std::map<std::string, uint64_t>::iterator maxIt = std::max_element(arrayPartitionToResII.begin(), arrayPartitionToResII.end(), prioritiseSmallerResIIMem);
+	std::map<std::string, uint64_t>::iterator maxIt = std::max_element(arrayPartitionToResII.begin(), arrayPartitionToResII.end(), prioritiseLargerResIIMem);
 
-	if(maxIt->second > 1)
+	if(arrayPartitionToResII.size() && maxIt->second > 1)
 		return std::make_tuple(maxIt->first, maxIt->second);
 	else
 		return std::make_tuple("none", 1);
+}
+
+std::tuple<std::string, uint64_t> BaseDatapath::calculateResIIMemRec() {
+	std::pair<std::string, uint64_t> lMax = std::make_pair("none", 1);
+
+	// Logic for local memory
+
+	std::set<unsigned> visited;
+	std::set<unsigned> toVisit;
+	std::function<void(const unsigned &, std::set<unsigned> &, std::unordered_map<unsigned, std::set<unsigned>> &)> recursiveBlock;
+	recursiveBlock = [&recursiveBlock, &visited](const unsigned &v, std::set<unsigned> &connected, std::unordered_map<unsigned, std::set<unsigned>> &depMap) {
+		visited.insert(v);
+		connected.insert(v);
+
+		for(auto &it : depMap.at(v)) {
+			if(!(visited.count(it)))
+				recursiveBlock(it, connected, depMap);
+		}
+	};
+	// Using this struct instead of a normal pair in the map customises the default initialiser
+	struct minMaxPair {
+		std::pair<uint64_t, uint64_t> value = std::make_pair(std::numeric_limits<uint64_t>::max(), 0);
+		uint64_t distance() const { return value.second - value.first; }
+	};
+
+	// XXX Loads do not have recurrence constraint on local memories. The whole segment was commented to reduce execution time
+#if 0
+	// Logic for loads
+
+	std::vector<std::pair<std::string, uint64_t>> loadMaxs;
+	std::unordered_map<std::string, uint64_t> connectedLoadGraphs;
+
+	// Consider only loads (and make them symmetric to facilitate calculation)
+	for(auto &it : loadDepMap) {
+		if(microops.at(it.first) != LLVM_IR_Load)
+			continue;
+
+		toVisit.insert(it.first);
+
+		for(auto &it2 : it.second)
+			loadDepMap[it2].insert(it.first);
+	}
+
+	for(auto &it : toVisit) {
+		if(!(visited.count(it))) {
+			std::set<unsigned> connected;
+			recursiveBlock(it, connected, loadDepMap);
+			std::set<std::string> consideredInterfaces;
+
+			// Find smallest and largest allocation value for each memory interface
+			// (if banking is disabled, all global loads share the same interface)
+			std::unordered_map<std::string, minMaxPair> minMaxPerInterface;
+			for(auto &it2 : connected) {
+				std::string arrayPartitionName = baseAddress.at(it2).first;
+				if(rcScheduledTime[it2] < minMaxPerInterface[arrayPartitionName].value.first)
+					minMaxPerInterface[arrayPartitionName].value.first = rcScheduledTime[it2];
+				if(rcScheduledTime[it2] > minMaxPerInterface[arrayPartitionName].value.second)
+					minMaxPerInterface[arrayPartitionName].value.second = rcScheduledTime[it2];
+
+				if(!(consideredInterfaces.count(arrayPartitionName))) {
+					consideredInterfaces.insert(arrayPartitionName);
+					(connectedLoadGraphs[arrayPartitionName])++;
+				}
+			}
+
+			// Save all distances to the load max vector
+			for(auto &it2 : minMaxPerInterface)
+				loadMaxs.push_back(std::make_pair(it2.first, it2.second.distance()));
+		}
+	}
+#endif
+
+	// Logic for stores
+
+	std::vector<std::pair<std::string, uint64_t>> storeMaxs;
+	std::unordered_map<std::string, uint64_t> connectedStoreGraphs;
+
+	visited.clear();
+	toVisit.clear();
+
+	// Consider only stores (and make them symmetric to facilitate calculation)
+	for(auto &it : storeDepMap) {
+		if(microops.at(it.first) != LLVM_IR_Store)
+			continue;
+
+		toVisit.insert(it.first);
+
+		for(auto &it2 : it.second)
+			storeDepMap[it2].insert(it.first);
+	}
+
+	for(auto &it : toVisit) {
+		if(!(visited.count(it))) {
+			std::set<unsigned> connected;
+			recursiveBlock(it, connected, storeDepMap);
+			std::set<std::string> consideredInterfaces;
+
+			// Find smallest and largest allocation value for each memory interface
+			// (if banking is disabled, all global stores share the same interface)
+			std::unordered_map<std::string, minMaxPair> minMaxPerInterface;
+			for(auto &it2 : connected) {
+				std::string arrayPartitionName = baseAddress.at(it2).first;
+				if(rcScheduledTime[it2] < minMaxPerInterface[arrayPartitionName].value.first)
+					minMaxPerInterface[arrayPartitionName].value.first = rcScheduledTime[it2];
+				if(rcScheduledTime[it2] > minMaxPerInterface[arrayPartitionName].value.second)
+					minMaxPerInterface[arrayPartitionName].value.second = rcScheduledTime[it2];
+
+				if(!(consideredInterfaces.count(arrayPartitionName))) {
+					consideredInterfaces.insert(arrayPartitionName);
+					(connectedStoreGraphs[arrayPartitionName])++;
+				}
+			}
+
+			// Save all distances to the store max vector
+			for(auto &it2 : minMaxPerInterface)
+				storeMaxs.push_back(std::make_pair(it2.first, it2.second.distance()));
+		}
+	}
+
+	// There is a key difference between Lina and Vivado regarding allocation of load/stores.
+	// While Lina always allocate no before than ALAP, Vivado create some "allocation pits"
+	// and attempt to concentrate all loads around these pits. The same applies for stores.
+	// Vivado does even input some bubbles to move these load/stores around.
+	// The intention is to reduce the distance among dependent loads and therefore reduce the
+	// II constraint that is being calculated here. Lina does not perform this type of allocation
+	// and problems might arise, for example when two dependence graphs can be allocated at the
+	// same window and have the same distance. Naturally they cannot be allocated to the same
+	// cycle as it violates port usage. In this case we approximate the correct behaviour by
+	// adding the amount of dependence graphs that we found, guaranteeing that the II here
+	// calculated will still respect interface usage
+
+	// Load segment was commented to reduce execution time
+#if 0
+	auto prioritiseLoadLargerCompensatedDistance = [&connectedLoadGraphs](const std::pair<std::string, uint64_t> &a, const std::pair<std::string, uint64_t> &b) {
+		return (a.second + connectedLoadGraphs.at(a.first)) < (b.second + connectedLoadGraphs.at(b.first));
+	};
+	std::vector<std::pair<std::string, uint64_t>>::iterator loadMaxIt = std::max_element(loadMaxs.begin(), loadMaxs.end(), prioritiseLoadLargerCompensatedDistance);
+	std::pair<std::string, uint64_t> loadMax = (loadMaxs.size() && loadMaxIt->second > 1)?
+		std::make_pair(loadMaxIt->first, loadMaxIt->second + connectedLoadGraphs.at(loadMaxIt->first)) : std::make_pair("none", 1);
+#endif
+
+	auto prioritiseStoreLargerCompensatedDistance = [&connectedStoreGraphs](const std::pair<std::string, uint64_t> &a, const std::pair<std::string, uint64_t> &b) {
+		return (a.second + connectedStoreGraphs.at(a.first)) < (b.second + connectedStoreGraphs.at(b.first));
+	};
+	std::vector<std::pair<std::string, uint64_t>>::iterator storeMaxIt = std::max_element(storeMaxs.begin(), storeMaxs.end(), prioritiseStoreLargerCompensatedDistance);
+	std::pair<std::string, uint64_t> storeMax = (storeMaxs.size() && storeMaxIt->second > 1)?
+		std::make_pair(storeMaxIt->first, storeMaxIt->second + connectedStoreGraphs.at(storeMaxIt->first)) : std::make_pair("none", 1);
+
+	// Load segment was commented to reduce execution time
+#if 0
+	// At last choose the largest
+	lMax = (loadMax.second > storeMax.second)? loadMax : storeMax;
+#else
+	lMax = storeMax;
+#endif
+
+	return lMax;
 }
 
 uint64_t BaseDatapath::calculateRecII(uint64_t currAsapII) {
@@ -1509,6 +1647,26 @@ uint64_t BaseDatapath::getLoopTotalLatency(uint64_t maxII) {
 	}
 
 	return enablePipelining? pipelinedLatency : noPipelineLatency;
+}
+
+void BaseDatapath::inheritLoadDepMap(unsigned targetID, unsigned sourceID) {
+	loadDepMap[targetID].insert(loadDepMap[sourceID].begin(), loadDepMap[sourceID].end());
+}
+
+void BaseDatapath::inheritStoreDepMap(unsigned targetID, unsigned sourceID) {
+	storeDepMap[targetID].insert(storeDepMap[sourceID].begin(), storeDepMap[sourceID].end());
+}
+
+void BaseDatapath::addToLoadDepMap(unsigned targetID, unsigned toAddID) {
+	// XXX falseDeps deactivated so far because no control edges are added in the Lina logic outside of MemoryModel
+	//if(falseDeps.count(std::make_pair(toAddID, targetID)))
+		loadDepMap[targetID].insert(toAddID);
+}
+
+void BaseDatapath::addToStoreDepMap(unsigned targetID, unsigned toAddID) {
+	// XXX falseDeps deactivated so far because no control edges are added in the Lina logic outside of MemoryModel
+	//if(falseDeps.count(std::make_pair(toAddID, targetID)))
+		storeDepMap[targetID].insert(toAddID);
 }
 
 void BaseDatapath::dumpSummary(
