@@ -19,7 +19,6 @@ protected:
 
 	std::map<std::string, std::tuple<uint64_t, uint64_t, size_t, unsigned>> arrayNameToConfig;
 	std::map<std::string, unsigned> arrayNameToNumOfPartitions;
-	//std::map<std::string, unsigned> arrayNameToWritePortsPerPartition;
 	std::map<std::string, float> arrayNameToEfficiency;
 	std::map<std::string, unsigned> arrayPartitionToReadPorts;
 	std::map<std::string, unsigned> arrayPartitionToReadPortsInUse;
@@ -34,15 +33,16 @@ protected:
 	fuCountTy unrIntOpCount;
 #endif
 	unsigned fAddInUse, fSubInUse, fMulInUse, fDivInUse;
-#if 0
-	unsigned registersAllocated;
-#endif
 #ifdef CONSTRAIN_INT_OP
 	fuCountTy intOpInUse;
 #endif
 	unsigned fAddThreshold, fSubThreshold, fMulThreshold, fDivThreshold;
 #ifdef CONSTRAIN_INT_OP
 	fuCountTy intOpThreshold;
+#endif
+	unsigned totalFAddCount, totalFSubCount, totalFMulCount, totalFDivCount;
+#ifdef CONSTRAIN_INT_OP
+	fuCountTy totalIntOpCount;
 #endif
 	bool isConstrained;
 	bool thresholdSet;
@@ -72,7 +72,6 @@ public:
 	virtual unsigned getLatency(unsigned opcode) = 0;
 	virtual double getInCycleLatency(unsigned opcode) = 0;
 	virtual bool isPipelined(unsigned opcode) = 0;
-	virtual bool canBeLiveOp(unsigned opcode) = 0;
 	virtual void calculateRequiredResources(
 		std::vector<int> &microops,
 		const ConfigurationManager::arrayInfoCfgMapTy &arrayInfoCfgMap,
@@ -93,13 +92,10 @@ public:
 	);
 	std::tuple<std::string, uint64_t> calculateResIIOp();
 
-	virtual void fillPack(Pack &P);
+	virtual void fillPack(Pack &P, unsigned loopLevel, unsigned datapathType, uint64_t targetII);
 	std::set<int> getConstrainedUnits() { return limitedBy; }
 
 	virtual void arrayAddPartition(std::string arrayName) = 0;
-#if 0
-	virtual bool arrayPartitionReplicate(std::string partitionName, bool commit = true) = 0;
-#endif
 	virtual bool fAddAddUnit(bool commit = true) = 0;
 	virtual bool fSubAddUnit(bool commit = true) = 0;
 	virtual bool fMulAddUnit(bool commit = true) = 0;
@@ -107,7 +103,6 @@ public:
 #ifdef CONSTRAIN_INT_OP
 	virtual bool intOpAddUnit(unsigned opcode, bool commit = true) = 0;
 #endif
-	virtual void regStoreLiveOps(std::set<unsigned> &liveOps, const std::unordered_map<int, unsigned> &resultSizeList) = 0;
 
 	unsigned arrayGetNumOfPartitions(std::string arrayName);
 	unsigned arrayGetPartitionReadPorts(std::string partitionName);
@@ -116,9 +111,6 @@ public:
 	const std::map<std::string, unsigned> &arrayGetNumOfPartitions() { return arrayNameToNumOfPartitions; }
 	const std::map<std::string, float> &arrayGetEfficiency() { return arrayNameToEfficiency; }
 	virtual unsigned arrayGetMaximumWritePortsPerPartition() = 0;
-#if 0
-	virtual unsigned romArrayGetMaximumReadPortsPerPartition() = 0;
-#endif
 	unsigned fAddGetAmount() { return fAddCount; }
 	unsigned fSubGetAmount() { return fSubCount; }
 	unsigned fMulGetAmount() { return fMulCount; }
@@ -174,9 +166,6 @@ class XilinxHardwareProfile : public HardwareProfile {
 		PER_PARTITION_PORTS_R = 2,
 		PER_PARTITION_PORTS_W = 1,
 		PER_PARTITION_MAX_PORTS_W = 2,
-#if 0
-		PER_PARTITION_MAX_PORTS_R_ROM = INFINITE_RESOURCES
-#endif
 	};
 	enum {
 		DSP_FADD = 2,
@@ -225,6 +214,7 @@ protected:
 #ifdef CONSTRAIN_INT_OP
 	fuResourcesMapTy intOpResources;
 #endif
+	unsigned memLogicFF, memLogicLUT;
 
 public:
 	XilinxHardwareProfile();
@@ -253,13 +243,10 @@ public:
 		const ConfigurationManager::partitionCfgMapTy &completePartitionCfgMap
 	);
 
-	void fillPack(Pack &P);
+	void fillPack(Pack &P, unsigned loopLevel, unsigned datapathType, uint64_t targetII);
 
 	void arrayAddPartition(std::string arrayName);
 	void arrayAddPartitions(std::string arrayName, unsigned amount);
-#if 0
-	bool arrayPartitionReplicate(std::string partitionName, bool commit = true);
-#endif
 	bool fAddAddUnit(bool commit = true);
 	bool fSubAddUnit(bool commit = true);
 	bool fMulAddUnit(bool commit = true);
@@ -267,12 +254,8 @@ public:
 #ifdef CONSTRAIN_INT_OP
 	bool intOpAddUnit(unsigned opcode, bool commit = true);
 #endif
-	void regStoreLiveOps(std::set<unsigned> &liveOps, const std::unordered_map<int, unsigned> &resultSizeList);
 
 	unsigned arrayGetMaximumWritePortsPerPartition();
-#if 0
-	unsigned romArrayGetMaximumReadPortsPerPartition();
-#endif
 	std::map<std::string, unsigned> arrayGetUsedBRAM18k() { return arrayNameToUsedBRAM18k; }
 
 	unsigned resourcesGetDSPs() { return usedDSP; }
@@ -306,20 +289,6 @@ public:
 };
 
 class XilinxZCUHardwareProfile : public XilinxHardwareProfile {
-	/*enum {
-		LATENCY_LOAD,
-		LATENCY_STORE,
-		LATENCY_ADD,
-		LATENCY_SUB,
-		LATENCY_MUL32,
-		LATENCY_DIV32,
-		LATENCY_FADD32,
-		LATENCY_FSUB32,
-		LATENCY_FMUL32,
-		LATENCY_FDIV32,
-		LATENCY_FCMP
-	};*/
-
 	// XXX: You can find the definitions at lib/Build_DDDG/HardwareProfileParams.cpp
 	/* This map format: {key (the operation being considered), {key (latency for completion), in-cycle latency in ns}} */
 	static const std::unordered_map<unsigned, std::map<unsigned, double>> timeConstrainedLatencies;

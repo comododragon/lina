@@ -134,6 +134,26 @@ uint64_t nextPowerOf2(uint64_t x) {
 	return x + 1;
 }
 
+uint64_t logNextPowerOf2(uint64_t x) {
+	unsigned onePos = 0;
+	bool foundOne = false;
+	bool foundMoreOne = false;
+
+	for(unsigned i = 63; i + 1; i--) {
+		if((x >> i) & 0x1) {
+			if(foundOne) {
+				foundMoreOne = true;
+			}
+			else {
+				onePos = i;
+				foundOne = true;
+			}
+		}
+	}
+
+	return foundMoreOne? onePos + 1 : onePos;
+}
+
 ConfigurationManager::ConfigurationManager(std::string kernelName) : kernelName(kernelName) { }
 
 void ConfigurationManager::appendToPipeliningCfg(std::string funcName, unsigned loopNo, unsigned loopLevel) {
@@ -283,7 +303,6 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 
 			assert(loopLevel <= numLevel && "Loop level is larger than number of levels");
 
-			// XXX: Is this correct?
 			if(loopLevel == numLevel)
 				continue;
 
@@ -305,9 +324,9 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 		}
 	}
 
-	if(unrollingCfgStr.size()) {
-		std::vector<std::string> unrollWholeLoopNameStr;
+	std::vector<std::string> unrollWholeLoopNameStr;
 
+	if(unrollingCfgStr.size()) {
 		for(std::string i : unrollingCfgStr) {
 			char buff[BUFF_STR_SZ];
 			unsigned loopNo, loopLevel;
@@ -332,18 +351,18 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 					appendToUnrollingCfg(mangledFuncName, loopNo, loopLevel, lineNo, unrollFactor);
 			}
 		}
+	}
 
-		// If loop pipelining in a loop that have nested non-unrolled loops, these loops must be fully unrolled. Therefore such
-		// configurations are automatically added
-		for(auto &it : wholeLoopName2CompUnrollFactorMap) {
-			std::string wholeLoopName = it.first;
-			uint64_t loopBound = it.second;
+	// If loop pipelining in a loop that have nested non-unrolled loops, these loops must be fully unrolled. Therefore such
+	// configurations are automatically added
+	for(auto &it : wholeLoopName2CompUnrollFactorMap) {
+		std::string wholeLoopName = it.first;
+		uint64_t loopBound = it.second;
 
-			std::vector<std::string>::iterator found = std::find(unrollWholeLoopNameStr.begin(), unrollWholeLoopNameStr.end(), wholeLoopName);
-			if(unrollWholeLoopNameStr.end() == found) {
-				std::tuple<std::string, unsigned, unsigned> parsed = parseWholeLoopName(wholeLoopName);
-				appendToUnrollingCfg(std::get<0>(parsed), std::get<1>(parsed), std::get<2>(parsed), -1, loopBound);
-			}
+		std::vector<std::string>::iterator found = std::find(unrollWholeLoopNameStr.begin(), unrollWholeLoopNameStr.end(), wholeLoopName);
+		if(unrollWholeLoopNameStr.end() == found) {
+			std::tuple<std::string, unsigned, unsigned> parsed = parseWholeLoopName(wholeLoopName);
+			appendToUnrollingCfg(std::get<0>(parsed), std::get<1>(parsed), std::get<2>(parsed), -1, loopBound);
 		}
 	}
 
@@ -365,6 +384,8 @@ void ConfigurationManager::parseAndPopulate(std::vector<std::string> &pipelineLo
 					scope = arrayInfoCfgTy::ARRAY_SCOPE_ROVAR;
 				else if("rwvar" == scopeStr)
 					scope = arrayInfoCfgTy::ARRAY_SCOPE_RWVAR;
+				else if("nocount" == scopeStr)
+					scope = arrayInfoCfgTy::ARRAY_SCOPE_NOCOUNT;
 #else
 				// For compatibility, we also accept "rovar" and "rwvar" which are mapped to "var"
 				if("var" == scopeStr || "rovar" == scopeStr || "rwvar" == scopeStr)
@@ -457,6 +478,8 @@ void ConfigurationManager::parseToFiles() {
 			scope = "rovar";
 		else if(arrayInfoCfgTy::ARRAY_SCOPE_RWVAR == it.second.scope)
 			scope = "rwvar";
+		else if(arrayInfoCfgTy::ARRAY_SCOPE_NOCOUNT == it.second.scope)
+			scope = "nocount";
 		else
 			scope = "arg";
 #else
@@ -547,6 +570,19 @@ template<> void Pack::addElement<std::string>(std::string name, std::string valu
 	}
 }
 
+template<> void Pack::addElement<Pack::resourceNodeTy>(std::string name, resourceNodeTy value) {
+	std::unordered_map<std::string, std::vector<resourceNodeTy>>::iterator found = resourceTreeContent.find(name);
+
+	if(resourceTreeContent.end() == found) {
+		std::vector<resourceNodeTy> vec;
+		vec.push_back(value);
+		resourceTreeContent[name] = vec;
+	}
+	else {
+		found->second.push_back(value);
+	}
+}
+
 std::vector<std::tuple<std::string, unsigned, unsigned>> Pack::getStructure() {
 	return structure;
 }
@@ -565,6 +601,10 @@ template<> std::vector<float> Pack::getElements<float>(std::string name) {
 
 template<> std::vector<std::string> Pack::getElements<std::string>(std::string name) {
 	return stringContent[name];
+}
+
+template<> std::vector<Pack::resourceNodeTy> Pack::getElements<Pack::resourceNodeTy>(std::string name) {
+	return resourceTreeContent[name];
 }
 
 template<> std::string Pack::mergeElements<uint64_t>(std::string name) {
@@ -610,6 +650,13 @@ template<> std::string Pack::mergeElements<uint64_t>(std::string name) {
 				aggrElem += it;
 
 			return std::to_string(aggrElem);
+		case MERGE_MULSUM:
+			aggrElem = 0;
+
+			for(unsigned i = 0; i < unsignedContent[name].size(); i += 2)
+				aggrElem += unsignedContent[name][i] * unsignedContent[name][i + 1];
+
+			return std::to_string(aggrElem);
 		case MERGE_EQUAL:
 			aggrElem = unsignedContent[name][0];
 
@@ -634,6 +681,10 @@ template<> std::string Pack::mergeElements<uint64_t>(std::string name) {
 			}
 
 			return aggrString;
+		case MERGE_RESOURCETREEMAX:
+			assert(false && "Cannot merge, invalid aggregation type for unsigned (MERGE_RESOURCETREEMAX)");
+		case MERGE_RESOURCELISTMAX:
+			assert(false && "Cannot merge, invalid aggregation type for unsigned (MERGE_RESOURCELISTMAX)");
 		default:
 			assert(false && "Cannot merge, aggregation type is MERGE_NONE");
 	}
@@ -682,6 +733,13 @@ template<> std::string Pack::mergeElements<int64_t>(std::string name) {
 				aggrElem += it;
 
 			return std::to_string(aggrElem);
+		case MERGE_MULSUM:
+			aggrElem = 0;
+
+			for(unsigned i = 0; i < signedContent[name].size(); i += 2)
+				aggrElem += signedContent[name][i] * signedContent[name][i + 1];
+
+			return std::to_string(aggrElem);
 		case MERGE_EQUAL:
 			aggrElem = signedContent[name][0];
 
@@ -706,6 +764,10 @@ template<> std::string Pack::mergeElements<int64_t>(std::string name) {
 			}
 
 			return aggrString;
+		case MERGE_RESOURCETREEMAX:
+			assert(false && "Cannot merge, invalid aggregation type for integer (MERGE_RESOURCETREEMAX)");
+		case MERGE_RESOURCELISTMAX:
+			assert(false && "Cannot merge, invalid aggregation type for unsigned (MERGE_RESOURCELISTMAX)");
 		default:
 			assert(false && "Cannot merge, aggregation type is MERGE_NONE");
 	}
@@ -752,6 +814,13 @@ template<> std::string Pack::mergeElements<float>(std::string name) {
 				aggrElem += it;
 
 			return std::to_string(aggrElem);
+		case MERGE_MULSUM:
+			aggrElem = 0;
+
+			for(unsigned i = 0; i < floatContent[name].size(); i += 2)
+				aggrElem += floatContent[name][i] * floatContent[name][i + 1];
+
+			return std::to_string(aggrElem);
 		case MERGE_EQUAL:
 			aggrElem = floatContent[name][0];
 
@@ -763,6 +832,10 @@ template<> std::string Pack::mergeElements<float>(std::string name) {
 			return isEqual? "true" : "false";
 		case MERGE_SET:
 			assert(false && "Cannot merge, invalid aggregation type for float (MERGE_SET)");
+		case MERGE_RESOURCETREEMAX:
+			assert(false && "Cannot merge, invalid aggregation type for float (MERGE_RESOURCETREEMAX)");
+		case MERGE_RESOURCELISTMAX:
+			assert(false && "Cannot merge, invalid aggregation type for unsigned (MERGE_RESOURCELISTMAX)");
 		default:
 			assert(false && "Cannot merge, aggregation type is MERGE_NONE");
 	}
@@ -790,7 +863,9 @@ template<> std::string Pack::mergeElements<std::string>(std::string name) {
 		case MERGE_MIN:
 			assert(false && "Cannot merge, invalid aggregation type for string (MERGE_MIN)");
 		case MERGE_SUM:
-			assert(false && "Cannot merge, invalid aggregation type for string (MERGE_SUM");
+			assert(false && "Cannot merge, invalid aggregation type for string (MERGE_SUM)");
+		case MERGE_MULSUM:
+			assert(false && "Cannot merge, invalid aggregation type for string (MERGE_MULSUM)");
 		case MERGE_EQUAL:
 			aggrString = stringContent[name][0];
 
@@ -815,6 +890,227 @@ template<> std::string Pack::mergeElements<std::string>(std::string name) {
 			}
 
 			return aggrString;
+		case MERGE_RESOURCETREEMAX:
+			assert(false && "Cannot merge, invalid aggregation type for string (MERGE_RESOURCETREEMAX)");
+		case MERGE_RESOURCELISTMAX:
+			assert(false && "Cannot merge, invalid aggregation type for unsigned (MERGE_RESOURCELISTMAX)");
+		default:
+			assert(false && "Cannot merge, merge type is MERGE_NONE");
+	}
+}
+
+template<> std::string Pack::mergeElements<Pack::resourceNodeTy>(std::string name) {
+	unsigned aggrElemFU;
+	unsigned aggrElemDSP;
+	unsigned aggrElemFF;
+	unsigned aggrElemLUT;
+	std::vector<resourceNodeTy>::iterator it;
+	std::vector<resourceNodeTy>::iterator itEnd;
+	std::string stringFU;
+	std::string stringDSP;
+	std::string stringFF;
+	std::string stringLUT;
+
+	std::tuple<std::string, unsigned, unsigned> elem;
+	bool found = false;
+	for(auto &it : structure) {
+		if(!(std::get<0>(it).compare(name))) {
+			elem = it;
+			found = true;
+		}
+	}
+	assert(found && "Element was not found");
+
+	switch(std::get<1>(elem)) {
+		case MERGE_MAX:
+			assert(false && "Cannot merge, invalid aggregation type for resource tree (MERGE_MAX)");
+		case MERGE_MIN:
+			assert(false && "Cannot merge, invalid aggregation type for resource tree (MERGE_MIN)");
+		case MERGE_SUM:
+			assert(false && "Cannot merge, invalid aggregation type for resource tree (MERGE_SUM)");
+		case MERGE_MULSUM:
+			assert(false && "Cannot merge, invalid aggregation type for resource tree (MERGE_MULSUM)");
+		case MERGE_EQUAL:
+			assert(false && "Cannot merge, invalid aggregation type for resource tree (MERGE_EQUAL)");
+		case MERGE_SET:
+			assert(false && "Cannot merge, invalid aggregation type for resource tree (MERGE_SET)");
+		/* Resource Tree Max: Sum the values for one instance of each DDDG in the code */
+		/* Used for integer FUs */
+		case MERGE_RESOURCETREEMAX:
+			aggrElemFU = 0;
+			aggrElemDSP = 0;
+			aggrElemFF = 0;
+			aggrElemLUT = 0;
+			it = resourceTreeContent[name].begin();
+			itEnd = resourceTreeContent[name].end();
+
+			// If this resource tree has only one node (i.e. mergeElements was called by BaseDatapath for a single DDDG)
+			// we simply return the resources of the single node.
+			if(1 == resourceTreeContent[name].size()) {
+				aggrElemFU = it->fus;
+				aggrElemDSP = it->dsps;
+				aggrElemFF = it->ffs;
+				aggrElemLUT = it->luts;
+			}
+			else {
+				while(it != itEnd) {
+					if(DatapathType::NORMAL_LOOP == it->datapathType) {
+						aggrElemFU += it->fus;
+						aggrElemDSP += it->dsps;
+						aggrElemFF += it->ffs;
+						aggrElemLUT += it->luts;
+						it++;
+					}
+					else if(DatapathType::NON_PERFECT_BEFORE == it->datapathType) {
+						unsigned beforeLoopLevel = it->loopLevel;
+						unsigned beforeFU = it->fus;
+						unsigned beforeDSP = it->dsps;
+						unsigned beforeFF = it->ffs;
+						unsigned beforeLUT = it->luts;
+
+						// We expect the next value to be a NON_PERFECT_AFTER for the same level
+						it++;
+
+						// If next node is already in another loop level or we reached the end, nothing to do here apart from adding up
+						if(itEnd == it || it->loopLevel != beforeLoopLevel) {
+							aggrElemFU += beforeFU;
+							aggrElemDSP += beforeDSP;
+							aggrElemFF += beforeFF;
+							aggrElemLUT += beforeLUT;
+						}
+						else {
+							if(DatapathType::NON_PERFECT_AFTER == it->datapathType) {
+								unsigned afterLoopLevel = it->loopLevel;
+								unsigned afterFU = it->fus;
+								unsigned afterDSP = it->dsps;
+								unsigned afterFF = it->ffs;
+								unsigned afterLUT = it->luts;
+
+								// We expect the next value to be a NON_PERFECT_BETWEEN for the same level
+								it++;
+
+								// If next node is already in another loop level or we reached the end, nothing to do here apart from adding up
+								if(itEnd == it || it->loopLevel != afterLoopLevel) {
+									aggrElemFU += beforeFU + afterFU;
+									aggrElemDSP += beforeDSP + afterDSP;
+									aggrElemFF += beforeFF + afterFF;
+									aggrElemLUT += beforeLUT + afterLUT;
+								}
+								else {
+									// The only thing that can come after an AFTER for the same loop level is a BETWEEN
+									assert(DatapathType::NON_PERFECT_BETWEEN == it->datapathType && "Cannot merge, resource tree has invalid format (missing nodes)");
+
+									// Check if between consumes more than BEFORE and AFTER together. If positive, use this resource
+									// count. Otherwise use BEFORE + AFTER
+									if((beforeFU + afterFU) > it->fus) {
+										aggrElemFU += beforeFU + afterFU;
+										aggrElemDSP += beforeDSP + afterDSP;
+										aggrElemFF += beforeFF + afterFF;
+										aggrElemLUT += beforeLUT + afterLUT;
+										it++;
+									}
+									else {
+										aggrElemFU += it->fus;
+										aggrElemDSP += it->dsps;
+										aggrElemFF += it->ffs;
+										aggrElemLUT += it->luts;
+										it++;
+									}
+								}
+							}
+							else if(DatapathType::NON_PERFECT_BETWEEN == it->datapathType) {
+								// There is no AFTER after BEFORE (lol), this means that BEFORE == BETWEEN, nothing to do here apart from adding up
+								aggrElemFU += beforeFU;
+								aggrElemDSP += beforeDSP;
+								aggrElemFF += beforeFF;
+								aggrElemLUT += beforeLUT;
+								it++;
+							}
+						}
+					}
+					else if(DatapathType::NON_PERFECT_AFTER == it->datapathType) {
+						unsigned afterLoopLevel = it->loopLevel;
+						unsigned afterFU = it->fus;
+						unsigned afterDSP = it->dsps;
+						unsigned afterFF = it->ffs;
+						unsigned afterLUT = it->luts;
+
+						// We expect the next value to be a NON_PERFECT_BETWEEN for the same level
+						it++;
+
+						// If next node is already in another loop level or we reached the end, nothing to do here apart from adding up
+						if(itEnd == it || it->loopLevel != afterLoopLevel) {
+							aggrElemFU += afterFU;
+							aggrElemDSP += afterDSP;
+							aggrElemFF += afterFF;
+							aggrElemLUT += afterLUT;
+						}
+						else {
+							// The only thing that can come after an AFTER for the same loop level is a BETWEEN
+							assert(DatapathType::NON_PERFECT_BETWEEN == it->datapathType && "Cannot merge, resource tree has invalid format (missing nodes)");
+
+							// Since there was no BEFORE, this means that AFTER  == BETWEEN, nothing to do here apart from adding up
+							aggrElemFU += afterFU;
+							aggrElemDSP += afterDSP;
+							aggrElemFF += afterFF;
+							aggrElemLUT += afterLUT;
+							it++;
+						}
+					}
+					else {
+						assert(false && "Cannot merge, resource tree has invalid format (missing nodes or out of order)");
+					}
+				}
+			}
+
+			stringFU = std::to_string(aggrElemFU);
+			stringDSP = std::to_string(aggrElemDSP);
+			stringFF = std::to_string(aggrElemFF);
+			stringLUT = std::to_string(aggrElemLUT);
+
+			// Since we will pack these values on a single stream, we assume 10 characters for each number
+			// If any exceeds, abort
+			assert(stringFU.size() <= 10 && stringDSP.size() <= 10 && stringFF.size() <= 10 && stringLUT.size() <= 10 && "Cannot merge, aggregated values exceeds 10 characters");
+
+			stringFU.insert(0, 10 - stringFU.size(), '0');
+			stringDSP.insert(0, 10 - stringDSP.size(), '0');
+			stringFF.insert(0, 10 - stringFF.size(), '0');
+			stringLUT.insert(0, 10 - stringLUT.size(), '0');
+
+			// Pack'em all!
+			return stringFU + stringDSP + stringFF + stringLUT;
+		/* Resource List Max: Find the maximum value considering one instance of each DDDG in the code */
+		/* Used for float FUs */
+		case MERGE_RESOURCELISTMAX:
+			aggrElemFU = 0;
+			aggrElemDSP = 0;
+			aggrElemFF = 0;
+			aggrElemLUT = 0;
+
+			for(auto &it : resourceTreeContent[name]) {
+				if(it.fus > aggrElemFU) {
+					aggrElemFU = it.fus;
+					aggrElemDSP = it.dsps;
+					aggrElemFF = it.ffs;
+					aggrElemLUT = it.luts;
+				}
+			}
+			stringFU = std::to_string(aggrElemFU);
+			stringDSP = std::to_string(aggrElemDSP);
+			stringFF = std::to_string(aggrElemFF);
+			stringLUT = std::to_string(aggrElemLUT);
+
+			// Since we will pack these values on a single stream, we assume 10 characters for each number
+			// If any exceeds, abort
+			assert(stringFU.size() <= 10 && stringDSP.size() <= 10 && stringFF.size() <= 10 && stringLUT.size() <= 10 && "Cannot merge, aggregated values exceeds 10 characters");
+
+			stringFU.insert(0, 10 - stringFU.size(), '0');
+			stringDSP.insert(0, 10 - stringDSP.size(), '0');
+			stringFF.insert(0, 10 - stringFF.size(), '0');
+			stringLUT.insert(0, 10 - stringLUT.size(), '0');
+
+			// Pack'em all!
+			return stringFU + stringDSP + stringFF + stringLUT;
 		default:
 			assert(false && "Cannot merge, merge type is MERGE_NONE");
 	}
@@ -853,6 +1149,7 @@ void Pack::merge(Pack &P) {
 	std::vector<int64_t> otherSignedStuff;
 	std::vector<float> otherFloatStuff;
 	std::vector<std::string> otherStringStuff;
+	std::vector<resourceNodeTy> otherResourceTreeStuff;
 
 	for(auto &it : structure) {
 		switch(std::get<2>(it)) {
@@ -876,6 +1173,11 @@ void Pack::merge(Pack &P) {
 				for(auto &it2 : otherStringStuff)
 					addElement<std::string>(std::get<0>(it), it2);
 				break;
+			case TYPE_RESOURCENET:
+				otherResourceTreeStuff = P.getElements<resourceNodeTy>(std::get<0>(it));
+				for(auto &it2 : otherResourceTreeStuff)
+					addElement<resourceNodeTy>(std::get<0>(it), it2);
+				break;
 			default:
 				assert(false && "Invalid type of element");
 				break;
@@ -890,4 +1192,5 @@ void Pack::clear() {
 	std::unordered_map<std::string, std::vector<int64_t>>().swap(signedContent);
 	std::unordered_map<std::string, std::vector<float>>().swap(floatContent);
 	std::unordered_map<std::string, std::vector<std::string>>().swap(stringContent);
+	std::unordered_map<std::string, std::vector<resourceNodeTy>>().swap(resourceTreeContent);
 }

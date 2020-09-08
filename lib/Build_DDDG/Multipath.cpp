@@ -27,39 +27,39 @@ void Multipath::_Multipath() {
 
 #ifdef CHECK_MULTIPATH_STATE
 		if(0 == checkerState) {
-			assert(BaseDatapath::NORMAL_LOOP == latencyType && "Multipath state checking failed: was expecting BaseDatapath::NORMAL_LOOP");
+			assert(DatapathType::NORMAL_LOOP == latencyType && "Multipath state checking failed: was expecting DatapathType::NORMAL_LOOP");
 			checkerState = 1;
 		}
 		else if(1 == checkerState) {
-			assert((BaseDatapath::PERFECT_LOOP == latencyType || BaseDatapath::NON_PERFECT_BEFORE == latencyType) &&
-				"Multipath state checking failed: was expecting BaseDatapath::NORMAL_LOOP or BaseDatapath::NON_PERFECT_BEFORE");
+			assert((DatapathType::PERFECT_LOOP == latencyType || DatapathType::NON_PERFECT_BEFORE == latencyType) &&
+				"Multipath state checking failed: was expecting DatapathType::NORMAL_LOOP or DatapathType::NON_PERFECT_BEFORE");
 
-			if(BaseDatapath::NON_PERFECT_BEFORE == latencyType) {
-				assert(i + 1 < latencies.size() && "Invalid latency info structure: BaseDatapath::NON_PERFECT_BEFORE was provided, but the rest was not");
+			if(DatapathType::NON_PERFECT_BEFORE == latencyType) {
+				assert(i + 1 < latencies.size() && "Invalid latency info structure: DatapathType::NON_PERFECT_BEFORE was provided, but the rest was not");
 
 				unsigned afterLoopLevel = std::get<0>(latencies[i + 1]);
 				unsigned afterLatencyType = std::get<1>(latencies[i + 1]);
 
-				assert(BaseDatapath::NON_PERFECT_AFTER == afterLatencyType && "Invalid latency info structure: BaseDatapath::NON_PERFECT_BEFORE was provided, but the rest was not");
+				assert(DatapathType::NON_PERFECT_AFTER == afterLatencyType && "Invalid latency info structure: DatapathType::NON_PERFECT_BEFORE was provided, but the rest was not");
 				assert(afterLoopLevel == currLoopLevel &&
-					"Invalid latency info structure: BaseDatapath::NON_PERFECT_BEFORE and BaseDatapath::NON_PERFECT_AFTER have different loop levels");
+					"Invalid latency info structure: DatapathType::NON_PERFECT_BEFORE and DatapathType::NON_PERFECT_AFTER have different loop levels");
 
 				if(currUnrollFactor > 1) {
-					assert(i + 2 < latencies.size() && "Invalid latency info structure: Unroll enabled for this loop level, but BaseDatapath::NON_PERFECT_BETWEEN was not provided");
+					assert(i + 2 < latencies.size() && "Invalid latency info structure: Unroll enabled for this loop level, but DatapathType::NON_PERFECT_BETWEEN was not provided");
 
 					unsigned betweenLoopLevel = std::get<0>(latencies[i + 2]);
 					unsigned betweenLatencyType = std::get<1>(latencies[i + 2]);
 
-					assert(BaseDatapath::NON_PERFECT_BETWEEN == betweenLatencyType &&
-						"Invalid latency info structure: Unroll enabled for this loop level, but BaseDatapath::NON_PERFECT_BETWEEN was not provided");
+					assert(DatapathType::NON_PERFECT_BETWEEN == betweenLatencyType &&
+						"Invalid latency info structure: Unroll enabled for this loop level, but DatapathType::NON_PERFECT_BETWEEN was not provided");
 					assert(betweenLoopLevel == currLoopLevel &&
-						"Invalid latency info structure: BaseDatapath::NON_PERFECT_BEFORE and BaseDatapath::NON_PERFECT_BETWEEN have different loop levels");
+						"Invalid latency info structure: DatapathType::NON_PERFECT_BEFORE and DatapathType::NON_PERFECT_BETWEEN have different loop levels");
 				}
 			}
 		}
 #endif
 
-		if(BaseDatapath::NORMAL_LOOP == latencyType) {
+		if(DatapathType::NORMAL_LOOP == latencyType) {
 			uint64_t unrolledBound = loopBound / currUnrollFactor;
 
 			if(enablePipelining)
@@ -67,7 +67,7 @@ void Multipath::_Multipath() {
 			else
 				numCycles = latency * unrolledBound + BaseDatapath::EXTRA_ENTER_EXIT_LOOP_LATENCY;
 		}
-		else if(BaseDatapath::PERFECT_LOOP == latencyType) {
+		else if(DatapathType::PERFECT_LOOP == latencyType) {
 			numCycles = numCycles * loopBound + BaseDatapath::EXTRA_ENTER_EXIT_LOOP_LATENCY;
 			// We consider EXTRA_ENTER_EXIT_LOOP_LATENCY as the overhead latency for a loop. When two consecutive loops
 			// are present, a cycle for each loop overhead can be merged (i.e. the exit condition of a loop can be evaluated
@@ -75,7 +75,7 @@ void Multipath::_Multipath() {
 			// possible with unroll, we compensate this cycle difference with the loop unroll factor
 			numCycles -= (currUnrollFactor - 1) * (loopBound / currUnrollFactor);
 		}
-		else if(BaseDatapath::NON_PERFECT_BEFORE == latencyType) {
+		else if(DatapathType::NON_PERFECT_BEFORE == latencyType) {
 			uint64_t afterLatency = std::get<2>(latencies[i + 1]);
 
 			uint64_t betweenLatency = 0;
@@ -130,7 +130,7 @@ void Multipath::_Multipath() {
 		unsigned currUnrollFactor = unrolls.at(i);
 
 		numCycles = numCycles * loopBound + BaseDatapath::EXTRA_ENTER_EXIT_LOOP_LATENCY;
-		// See explanation above, in the if(BaseDatapath::PERFECT_LOOP == ...)
+		// See explanation above, in the if(DatapathType::PERFECT_LOOP == ...)
 		numCycles -= (currUnrollFactor - 1) * (loopBound / currUnrollFactor);
 	}
 
@@ -141,6 +141,10 @@ void Multipath::_Multipath() {
 		std::string name = std::get<0>(it);
 		unsigned mergeType = std::get<1>(it);
 		unsigned type = std::get<2>(it);
+
+		// Names starting with "_" are not printed (used for other purposes)
+		if('_' == name[0])
+			continue;
 
 		if(Pack::MERGE_EQUAL == mergeType) {
 			if(Pack::TYPE_UNSIGNED == type) {
@@ -186,14 +190,6 @@ void Multipath::_Multipath() {
 #endif
 }
 
-// XXX: This may be a good place to implement some global optimisations.
-// For example, the gemm case, where loadstoreinstcombine transforms the last store in the inner loop as a phi-store in the header, that could be detected here.
-// Performing this optimisation post-DDDG may have some benefits, for example being sensitive to post-DDDG optimisations such as unroll, pipeline, etc.
-// For now, I am performing instcombine before DDDG generation due to simplicity.
-// One approach for global optimisation is: in this method, generate the DynamicDatapath but stop RIGHT AFTER DDDG is generated. Save all DDs in a vector
-// Then, iterate over all DDs in loop nest order and detect for optimisations. Optimise, then schedule.
-// One possible issue is regarding the global variables that are used. We must ensure that one DD messing in the global vars does not interfere with the other DDs
-// And this is why I hate global variables...
 void Multipath::recursiveLookup(unsigned currLoopLevel, unsigned finalLoopLevel) {
 	unsigned recII = 0;
 
@@ -217,27 +213,27 @@ void Multipath::recursiveLookup(unsigned currLoopLevel, unsigned finalLoopLevel)
 		VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(finalLoopLevel) << "] Estimated cycles: " << std::to_string(DD.getCycles()) << "\n");
 		VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(finalLoopLevel) << "] Finished\n");
 
-		latencies.push_back(std::make_tuple(finalLoopLevel, BaseDatapath::NORMAL_LOOP, DD.getRCIL(), DD.getMaxII()));
+		latencies.push_back(std::make_tuple(finalLoopLevel, DatapathType::NORMAL_LOOP, DD.getRCIL(), DD.getMaxII()));
 		P.merge(DD.getPack());
 
 		return;
 	}
 	else {
 		std::string wholeLoopName = appendDepthToLoopName(loopName, currLoopLevel);
-		wholeloopName2perfectOrNotMapTy::iterator found = wholeloopName2perfectOrNotMap.find(wholeLoopName);
-		assert(found != wholeloopName2perfectOrNotMap.end() && "Could not find loop in wholeloopName2perfectOrNotMap");
-		wholeloopName2loopBoundMapTy::iterator found2 = wholeloopName2loopBoundMap.find(wholeLoopName);
-		assert(found2 != wholeloopName2loopBoundMap.end() && "Could not find loop in wholeloopName2loopBoundMap");
-		bool currIsPerfect = found->second;
-		uint64_t currLoopBound = found2->second;
+		wholeloopName2loopBoundMapTy::iterator found = wholeloopName2loopBoundMap.find(wholeLoopName);
+		assert(found != wholeloopName2loopBoundMap.end() && "Could not find loop in wholeloopName2loopBoundMap");
+		uint64_t currLoopBound = found->second;
 		unsigned currUnrollFactor = unrolls.at(currLoopLevel - 1);
 		unsigned targetUnrollFactor = (currLoopBound < currUnrollFactor && currLoopBound)? currLoopBound : currUnrollFactor;
 
-		if(currIsPerfect) {
+		// There used to be logic to control NPLA here, but for now it is always active as long --f-npla is set
+		bool calculateBefore = true;
+		bool calculateAfter = true;
+		if(!calculateBefore && !calculateAfter) {
 			VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] This loop nest is perfect. Proceeding to next level\n");
 
 			recursiveLookup(currLoopLevel + 1, finalLoopLevel);
-			latencies.push_back(std::make_tuple(currLoopLevel, BaseDatapath::PERFECT_LOOP, 0, 0));
+			latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::PERFECT_LOOP, 0, 0));
 
 			VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Finished\n");
 		}
@@ -247,22 +243,43 @@ void Multipath::recursiveLookup(unsigned currLoopLevel, unsigned finalLoopLevel)
 			VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the nested loop\n");
 			recursiveLookup(currLoopLevel + 1, finalLoopLevel);
 
-			VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the region before the nested loop\n");
-			DynamicDatapath DD(kernelName, CM, summaryFile, loopName, currLoopLevel, targetUnrollFactor, BaseDatapath::NON_PERFECT_BEFORE);
-			latencies.push_back(std::make_tuple(currLoopLevel, BaseDatapath::NON_PERFECT_BEFORE, DD.getRCIL(), 0));
-			P.merge(DD.getPack());
+			unsigned ddRCIL = 0;
+			if(calculateBefore) {
+				VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the region before the nested loop\n");
+				DynamicDatapath DD(kernelName, CM, summaryFile, loopName, currLoopLevel, targetUnrollFactor, DatapathType::NON_PERFECT_BEFORE);
+				ddRCIL = DD.getRCIL();
+				latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::NON_PERFECT_BEFORE, ddRCIL, 0));
+				P.merge(DD.getPack());
+			}
+			else {
+				VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Region before the nested loop not tagged for exploration, skipping\n");
+				latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::NON_PERFECT_BEFORE, 0, 0));
+			}
 
-			VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the region after the nested loop\n");
-			DynamicDatapath DD2(kernelName, CM, summaryFile, loopName, currLoopLevel, targetUnrollFactor, BaseDatapath::NON_PERFECT_AFTER);
-			latencies.push_back(std::make_tuple(currLoopLevel, BaseDatapath::NON_PERFECT_AFTER, DD2.getRCIL(), 0));
-			P.merge(DD2.getPack());
+			unsigned dd2RCIL = 0;
+			if(calculateAfter) {
+				VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the region after the nested loop\n");
+				DynamicDatapath DD2(kernelName, CM, summaryFile, loopName, currLoopLevel, targetUnrollFactor, DatapathType::NON_PERFECT_AFTER);
+				dd2RCIL = DD2.getRCIL();
+				latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::NON_PERFECT_AFTER, dd2RCIL, 0));
+				P.merge(DD2.getPack());
+			}
+			else {
+				VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Region after the nested loop not tagged for exploration, skipping\n");
+				latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::NON_PERFECT_AFTER, 0, 0));
+			}
 
 			// Unroll detected. Since the code is statically replicated, we also calculate the inter-iteration scheduling to improve acurracy
 			if(targetUnrollFactor > 1) {
-				VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the region between the unrolled nested loops\n");
-				DynamicDatapath DD3(kernelName, CM, summaryFile, loopName, currLoopLevel, targetUnrollFactor, BaseDatapath::NON_PERFECT_BETWEEN);
-				latencies.push_back(std::make_tuple(currLoopLevel, BaseDatapath::NON_PERFECT_BETWEEN, DD3.getRCIL(), 0));
-				P.merge(DD3.getPack());
+				if(ddRCIL || dd2RCIL) {
+					VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Building dynamic datapath for the region between the unrolled nested loops\n");
+					DynamicDatapath DD3(kernelName, CM, summaryFile, loopName, currLoopLevel, targetUnrollFactor, DatapathType::NON_PERFECT_BETWEEN);
+					latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::NON_PERFECT_BETWEEN, DD3.getRCIL(), 0));
+					P.merge(DD3.getPack());
+				}
+				else {
+					latencies.push_back(std::make_tuple(currLoopLevel, DatapathType::NON_PERFECT_BETWEEN, 0, 0));
+				}
 			}
 
 			VERBOSE_PRINT(errs() << "[][][][multipath][" << std::to_string(currLoopLevel) << "] Finished\n");
@@ -289,10 +306,135 @@ void Multipath::dumpSummary() {
 	*summaryFile << "Total cycles: " << std::to_string(numCycles) << "\n";
 	*summaryFile << "------------------------------------------------\n";
 
+	/* XXX Resource estimation! */
+
+	// Finalise shared resources calculation
+	unsigned sharedFU = 0;
+	unsigned sharedDSP = 0;
+	unsigned sharedFF = 0;
+	unsigned sharedLUT = 0;
+#ifdef LEGACY_SEPARATOR
+	std::string value = P.mergeElements<Pack::resourceNodeTy>("_shared~fadd");
+#else
+	std::string value = P.mergeElements<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fadd");
+#endif
+	// Unpacking the values from the string. Each variable has 10 characters allocated
+	// I know this is ugly, please don't kill me...
+	sharedFU += stol(value.substr(0, 10));
+	sharedDSP += stol(value.substr(10, 10));
+	sharedFF += stol(value.substr(20, 10));
+	sharedLUT += stol(value.substr(30, 10));
+#ifdef LEGACY_SEPARATOR
+	value = P.mergeElements<Pack::resourceNodeTy>("_shared~fsub");
+#else
+	std::string value = P.mergeElements<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fsub");
+#endif
+	sharedFU += stol(value.substr(0, 10));
+	sharedDSP += stol(value.substr(10, 10));
+	sharedFF += stol(value.substr(20, 10));
+	sharedLUT += stol(value.substr(30, 10));
+#ifdef LEGACY_SEPARATOR
+	value = P.mergeElements<Pack::resourceNodeTy>("_shared~fmul");
+#else
+	std::string value = P.mergeElements<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fmul");
+#endif
+	sharedFU += stol(value.substr(0, 10));
+	sharedDSP += stol(value.substr(10, 10));
+	sharedFF += stol(value.substr(20, 10));
+	sharedLUT += stol(value.substr(30, 10));
+#ifdef LEGACY_SEPARATOR
+	value = P.mergeElements<Pack::resourceNodeTy>("_shared~fdiv");
+#else
+	std::string value = P.mergeElements<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fdiv");
+#endif
+	sharedFU += stol(value.substr(0, 10));
+	sharedDSP += stol(value.substr(10, 10));
+	sharedFF += stol(value.substr(20, 10));
+	sharedLUT += stol(value.substr(30, 10));
+
+	// Finalise unshared resources calculation
+	unsigned unsharedFU = 0;
+	unsigned unsharedDSP = 0;
+	unsigned unsharedFF = 0;
+	unsigned unsharedLUT = 0;
+	for(auto &it : P.getStructure()) {
+		std::string name = std::get<0>(it);
+
+#ifdef LEGACY_SEPARATOR
+		if(!(name.compare(0, 10, "_unshared~"))) {
+#else
+		if(!(name.compare(0, 10, "_unshared" GLOBAL_SEPARATOR))) {
+#endif
+			value = P.mergeElements<Pack::resourceNodeTy>(name);
+			unsharedFU += stol(value.substr(0, 10));
+			unsharedDSP += stol(value.substr(10, 10));
+			unsharedFF += stol(value.substr(20, 10));
+			unsharedLUT += stol(value.substr(30, 10));
+		}
+	}
+
+	std::string wholeLoopName = appendDepthToLoopName(loopName, 1);
+	wholeloopName2loopBoundMapTy::iterator found = wholeloopName2loopBoundMap.find(wholeLoopName);
+	uint64_t loopBound = found->second;
+	// Use all bounds
+	for(unsigned i = 2; i <= LpName2numLevelMap.at(loopName); i++) {
+		wholeLoopName = appendDepthToLoopName(loopName, i);
+		found = wholeloopName2loopBoundMap.find(wholeLoopName);
+		loopBound *= found->second;
+	}
+
+	assert("true" == P.mergeElements<uint64_t>("_memlogicFF") && "Merged values from datapaths differ where it should not differ (_memlogicFF)");
+	unsigned mlFF = P.getElements<uint64_t>("_memlogicFF")[0];
+	assert("true" == P.mergeElements<uint64_t>("_memlogicLUT") && "Merged values from datapaths differ where it should not differ (_memlogicLUT)");
+	unsigned mlLUT = P.getElements<uint64_t>("_memlogicLUT")[0];
+
+	uint64_t nStore = stol(P.mergeElements<uint64_t>("_nStore"));
+	uint64_t nLoad = stol(P.mergeElements<uint64_t>("_nLoad"));
+	uint64_t nOp = sharedFU + unsharedFU;
+	uint64_t tRcIL = stol(P.mergeElements<uint64_t>("_tRcIL"));
+	unsigned lK = LpName2numLevelMap.at(loopName);
+	unsigned e = logNextPowerOf2(loopBound);
+	unsigned V1 = e + 1, V2 = 2 * e, V3 = e + 2;
+
 	for(auto &it : P.getStructure()) {
 		std::string name = std::get<0>(it);
 		unsigned mergeType = std::get<1>(it);
 		unsigned type = std::get<2>(it);
+
+		// Names starting with "_" are not printed (used for other purposes)
+		if('_' == name[0])
+			continue;
+
+		// Special treament for certain merges (other arithmetics are performed instead of simple merge
+		if("DSPs" == name) {
+			uint64_t value = sharedDSP + unsharedDSP;
+
+			*summaryFile << name << ": " << value << "\n";
+			continue;
+		}
+		else if("FFs" == name) {
+			unsigned rFF = 32 * (nLoad + nStore + nOp) + tRcIL + (1 == lK? 1 : 2) * V1 * lK;
+			uint64_t value = sharedFF + unsharedFF + rFF + mlFF;
+
+			*summaryFile << name << ": " << value << "\n";
+			continue;
+		}
+		else if("LUTs" == name) {
+			unsigned mLUT = 32 * (nStore + nOp) + 14 * nLoad + V1 * lK;
+			// Use all unrolls
+			loopName2levelUnrollVecMapTy::iterator found2 = loopName2levelUnrollVecMap.find(loopName);
+			assert(found2 != loopName2levelUnrollVecMap.end() && "Could not find loop in loopName2levelUnrollVecMap");
+			std::vector<unsigned> targetUnroll = found2->second;
+			uint64_t accUnrollFactor = 1;
+			for(unsigned i = loopLevel - 1; i + 1; i--)
+				accUnrollFactor *= targetUnroll.at(i);
+			unsigned exLUT = (V1 + V2 + V3) * lK + V1 * (accUnrollFactor - 1);
+
+			uint64_t value = sharedLUT + unsharedLUT + mLUT + exLUT + mlLUT;
+
+			*summaryFile << name << ": " << value << "\n";
+			continue;
+		}
 
 		if(Pack::MERGE_EQUAL == mergeType) {
 			if(Pack::TYPE_UNSIGNED == type) {
@@ -369,19 +511,19 @@ void Multipath::printDatabase() {
 		std::string loopType;
 
 		switch(std::get<1>(x)) {
-			case BaseDatapath::NORMAL_LOOP:
+			case DatapathType::NORMAL_LOOP:
 				loopType = "NORMAL_LOOP";
 				break;
-			case BaseDatapath::PERFECT_LOOP:
+			case DatapathType::PERFECT_LOOP:
 				loopType = "PERFECT_LOOP";
 				break;
-			case BaseDatapath::NON_PERFECT_BEFORE:
+			case DatapathType::NON_PERFECT_BEFORE:
 				loopType = "NON_PERFECT_BEFORE";
 				break;
-			case BaseDatapath::NON_PERFECT_BETWEEN:
+			case DatapathType::NON_PERFECT_BETWEEN:
 				loopType = "NON_PERFECT_BETWEEN";
 				break;
-			case BaseDatapath::NON_PERFECT_AFTER:
+			case DatapathType::NON_PERFECT_AFTER:
 				loopType = "NON_PERFECT_AFTER";
 				break;
 			default:

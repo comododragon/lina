@@ -219,7 +219,6 @@ const std::unordered_map<unsigned, XilinxHardwareProfile::fuResourcesTy> XilinxH
 	{LLVM_IR_LShr8, fuResourcesTy(0, 0, 16, 0)},
 #endif
 #ifdef CUSTOM_OPS
-	// TODO parei aqui
 	{LLVM_IR_APAdd, fuResourcesTy(0, 0, 384, 0)},
 	{LLVM_IR_APSub, fuResourcesTy(0, 0, 384, 0)},
 	{LLVM_IR_APMul, fuResourcesTy(16, 361, 178, 0)},
@@ -265,7 +264,6 @@ const std::unordered_map<unsigned, std::map<unsigned, double>> XilinxZCUHardware
 	{LLVM_IR_LShr8, {{1, 0.74}}},
 #endif
 #ifdef CUSTOM_OPS
-	// TODO parei aqui
 	{LLVM_IR_APAdd, {{1, 2.26}, {2, 1.12}}},
 	{LLVM_IR_APSub, {{1, 2.26}, {2, 1.12}}},
 	{LLVM_IR_APMul, {{1, 55.3}, {2, 3.68}, {3, 3.41}, {5, 2.61}, {6, 1.81}}},
@@ -306,7 +304,6 @@ const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwa
 	{LLVM_IR_LShr8, {{1, 0}}},
 #endif
 #ifdef CUSTOM_OPS
-	// TODO parei aqui
 	{LLVM_IR_APAdd, {{1, 0}, {2, 0}}},
 	{LLVM_IR_APSub, {{1, 0}, {2, 0}}},
 	{LLVM_IR_APMul, {{1, 497}, {2, 16}, {3, 16}, {5, 16}, {6, 16}}},
@@ -347,7 +344,6 @@ const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwa
 	{LLVM_IR_LShr8, {{1, 0}}},
 #endif
 #ifdef CUSTOM_OPS
-	// TODO parei aqui
 	{LLVM_IR_APAdd, {{1, 0}, {2, 580}}},
 	{LLVM_IR_APSub, {{1, 0}, {2, 580}}},
 	{LLVM_IR_APMul, {{1, 0}, {2, 361}, {3, 362}, {5, 441}, {6, 527}}},
@@ -388,7 +384,6 @@ const std::unordered_map<unsigned, std::map<unsigned, unsigned>> XilinxZCUHardwa
 	{LLVM_IR_LShr8, {{1, 16}}},
 #endif
 #ifdef CUSTOM_OPS
-	// TODO parei aqui
 	{LLVM_IR_APAdd, {{1, 384}, {2, 130}}},
 	{LLVM_IR_APSub, {{1, 384}, {2, 130}}},
 	{LLVM_IR_APMul, {{1, 9296}, {2, 178}, {3, 178}, {5, 249}, {6, 179}}},

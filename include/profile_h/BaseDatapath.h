@@ -29,13 +29,6 @@ typedef struct {
 
 class BaseDatapath {
 public:
-	enum {
-		NORMAL_LOOP,
-		PERFECT_LOOP,
-		NON_PERFECT_BEFORE,
-		NON_PERFECT_BETWEEN,
-		NON_PERFECT_AFTER
-	};
 	// Additional costs for latency calculation
 	enum {
 		EXTRA_ENTER_EXIT_LOOP_LATENCY = 2
@@ -141,8 +134,6 @@ public:
 		executedListTy storeExecuted;
 		executedListTy intOpExecuted;
 		executedListTy callExecuted;
-
-		std::set<unsigned> liveOps;
 
 		std::ofstream dumpFile;
 

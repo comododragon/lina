@@ -15,14 +15,16 @@ HardwareProfile::HardwareProfile() {
 	fSubInUse = 0;
 	fMulInUse = 0;
 	fDivInUse = 0;
-#if 0
-	registersAllocated = 0;
-#endif
 
 	fAddThreshold = 0;
 	fSubThreshold = 0;
 	fMulThreshold = 0;
 	fDivThreshold = 0;
+
+	totalFAddCount = 0;
+	totalFSubCount = 0;
+	totalFMulCount = 0;
+	totalFDivCount = 0;
 
 	isConstrained = false;
 	thresholdSet = false;
@@ -53,6 +55,14 @@ void HardwareProfile::clear() {
 #ifdef CONSTRAIN_INT_OP
 	intOpCount.clear();
 #endif
+
+	totalFAddCount = 0;
+	totalFSubCount = 0;
+	totalFMulCount = 0;
+	totalFDivCount = 0;
+#ifdef CONSTRAIN_INT_OP
+	totalIntOpCount.clear();
+#endif
 }
 
 void HardwareProfile::constrainHardware(
@@ -69,12 +79,8 @@ void HardwareProfile::constrainHardware(
 #ifdef CONSTRAIN_INT_OP
 	intOpInUse.clear();
 #endif
-#if 0
-	registersAllocated = 0;
-#endif
 
 	arrayNameToConfig.clear();
-	//arrayNameToWritePortsPerPartition.clear();
 	arrayNameToEfficiency.clear();
 	arrayPartitionToReadPorts.clear();
 	arrayPartitionToReadPortsInUse.clear();
@@ -165,7 +171,10 @@ std::tuple<std::string, uint64_t> HardwareProfile::calculateResIIOp() {
 		return std::make_tuple("none", 1);
 }
 
-void HardwareProfile::fillPack(Pack &P) {
+void HardwareProfile::fillPack(Pack &P, unsigned loopLevel, unsigned datapathType, uint64_t targetII) {
+	if(targetII)
+		assert(DatapathType::NORMAL_LOOP == datapathType && "Attempt to calculate resources with II > 1 for a non-perfect body DDDG");
+
 	P.addDescriptor("fAdd units", Pack::MERGE_MAX, Pack::TYPE_UNSIGNED);
 	P.addElement<uint64_t>("fAdd units", fAddGetAmount());
 	P.addDescriptor("fSub units", Pack::MERGE_MAX, Pack::TYPE_UNSIGNED);
@@ -216,11 +225,11 @@ bool HardwareProfile::fAddTryAllocate(bool commit) {
 
 	// There are fAdd available for use, just allocate it
 	if(fAddInUse < fAddCount) {
-		if(commit)
+		if(commit) {
 			fAddInUse++;
-#if 0
-		if(commit) registersAllocated++;
-#endif
+			totalFAddCount++;
+		}
+
 		return true;
 	}
 	// All fAdd are in use, try to allocate a new unit
@@ -233,12 +242,11 @@ bool HardwareProfile::fAddTryAllocate(bool commit) {
 		// Try to allocate a new unit
 		bool success = fAddAddUnit(commit);
 		// If successful, mark this unit as allocated
-		if(success && commit)
+		if(success && commit) {
 			fAddInUse++;
+			totalFAddCount++;
+		}
 
-#if 0
-		if(success && commit) registersAllocated++;
-#endif
 		return success;
 	}
 }
@@ -248,11 +256,11 @@ bool HardwareProfile::fSubTryAllocate(bool commit) {
 
 	// There are fSub available for use, just allocate it
 	if(fSubInUse < fSubCount) {
-		if(commit)
+		if(commit) {
 			fSubInUse++;
-#if 0
-		if(commit) registersAllocated++;
-#endif
+			totalFSubCount++;
+		}
+
 		return true;
 	}
 	// All fSub are in use, try to allocate a new unit
@@ -265,12 +273,11 @@ bool HardwareProfile::fSubTryAllocate(bool commit) {
 		// Try to allocate a new unit
 		bool success = fSubAddUnit(commit);
 		// If successful, mark this unit as allocated
-		if(success && commit)
+		if(success && commit) {
 			fSubInUse++;
+			totalFSubCount++;
+		}
 
-#if 0
-		if(success && commit) registersAllocated++;
-#endif
 		return success;
 	}
 }
@@ -280,11 +287,11 @@ bool HardwareProfile::fMulTryAllocate(bool commit) {
 
 	// There are fMul available for use, just allocate it
 	if(fMulInUse < fMulCount) {
-		if(commit)
+		if(commit) {
 			fMulInUse++;
-#if 0
-		if(commit) registersAllocated++;
-#endif
+			totalFMulCount++;
+		}
+
 		return true;
 	}
 	// All fMul are in use, try to allocate a new unit
@@ -297,12 +304,11 @@ bool HardwareProfile::fMulTryAllocate(bool commit) {
 		// Try to allocate a new unit
 		bool success = fMulAddUnit(commit);
 		// If successful, mark this unit as allocated
-		if(success && commit)
+		if(success && commit) {
 			fMulInUse++;
+			totalFMulCount++;
+		}
 
-#if 0
-		if(success && commit) registersAllocated++;
-#endif
 		return success;
 	}
 }
@@ -312,11 +318,11 @@ bool HardwareProfile::fDivTryAllocate(bool commit) {
 
 	// There are fDiv available for use, just allocate it
 	if(fDivInUse < fDivCount) {
-		if(commit)
+		if(commit) {
 			fDivInUse++;
-#if 0
-		if(commit) registersAllocated++;
-#endif
+			totalFDivCount++;
+		}
+
 		return true;
 	}
 	// All fDiv are in use, try to allocate a new unit
@@ -329,12 +335,11 @@ bool HardwareProfile::fDivTryAllocate(bool commit) {
 		// Try to allocate a new unit
 		bool success = fDivAddUnit(commit);
 		// If successful, mark this unit as allocated
-		if(success && commit)
+		if(success && commit) {
 			fDivInUse++;
+			totalFDivCount++;
+		}
 
-#if 0
-		if(success && commit) registersAllocated++;
-#endif
 		return success;
 	}
 }
@@ -352,22 +357,9 @@ bool HardwareProfile::loadTryAllocate(std::string arrayPartitionName, bool commi
 	assert(found != arrayPartitionToReadPorts.end() && "Array has no storage allocated for it");
 	assert(found2 != arrayPartitionToReadPortsInUse.end() && "Array has no storage allocated for it");
 
-#if 0
-	// All ports are being used
-	if(found2->second >= found->second) {
-		// We can try to replicate (works only with ROM)
-		bool success = arrayPartitionReplicate(arrayPartitionName, commit);
-		// If successful, mark as allocated
-		if(success && commit)
-			(found2->second)++;
-
-		return success;
-	}
-#else
 	// All ports are being used, not able to allocate right now
 	if(found2->second >= found->second)
 		return false;
-#endif
 
 	// Allocate a port
 	if(commit)
@@ -393,14 +385,6 @@ bool HardwareProfile::storeTryAllocate(std::string arrayPartitionName, bool comm
 				(found2->second)++;
 			}
 
-/*#ifdef LEGACY_SEPARATOR
-			size_t tagPos = arrayPartitionName.find("-");
-#else
-			size_t tagPos = arrayPartitionName.find(GLOBAL_SEPARATOR);
-#endif
-			if(commit)
-				(arrayNameToWritePortsPerPartition[arrayPartitionName.substr(0, tagPos)])++;*/
-
 			return true;
 		}
 		// Attempt to allocate a new port failed
@@ -422,11 +406,11 @@ bool HardwareProfile::intOpTryAllocate(int opcode, bool commit) {
 
 	// There are available for use, just allocate it
 	if(intOpInUse[opcode] < intOpCount[opcode]) {
-		if(commit)
+		if(commit) {
 			(intOpInUse[opcode])++;
-#if 0
-		if(commit) registersAllocated++;
-#endif
+			(totalIntOpCount[opcode])++;
+		}
+
 		return true;
 	}
 	// All are in use, try to allocate a new unit
@@ -439,12 +423,11 @@ bool HardwareProfile::intOpTryAllocate(int opcode, bool commit) {
 		// Try to allocate a new unit
 		bool success = intOpAddUnit(opcode, commit);
 		// If successful, mark this unit as allocated
-		if(success && commit)
+		if(success && commit) {
 			(intOpInUse[opcode])++;
+			(totalIntOpCount[opcode])++;
+		}
 
-#if 0
-		if(success && commit) registersAllocated++;
-#endif
 		return success;
 	}
 #else
@@ -548,6 +531,9 @@ XilinxHardwareProfile::XilinxHardwareProfile() {
 	usedLUT = 0;
 	usedBRAM18k = 0;
 
+	memLogicFF = 0;
+	memLogicLUT = 0;
+
 	fAddDSP = DSP_FADD;
 	fAddFF = FF_FADD;
 	fAddLUT = LUT_FADD;
@@ -574,6 +560,9 @@ void XilinxHardwareProfile::clear() {
 	usedFF = 0;
 	usedLUT = 0;
 	usedBRAM18k = 0;
+
+	memLogicFF = 0;
+	memLogicLUT = 0;
 }
 
 unsigned XilinxHardwareProfile::getLatency(unsigned opcode) {
@@ -704,56 +693,7 @@ bool XilinxHardwareProfile::isPipelined(unsigned opcode) {
 #endif
 #endif
 			return true;
-		// XXX: fCmp, integer ops and call are here but because we are not constraining those resources!
-		// Perhaps if we constrain them, we shold double-check if they're pipelined or not
 		default: 
-			return false;
-	}
-}
-
-bool XilinxHardwareProfile::canBeLiveOp(unsigned opcode) {
-	// TODO: Are all of those actually "true"?
-	switch(opcode) {
-		case LLVM_IR_FAdd:
-		case LLVM_IR_FSub:
-		case LLVM_IR_FMul:
-		case LLVM_IR_FDiv:
-		case LLVM_IR_Load:
-		case LLVM_IR_Store:
-#ifdef CONSTRAIN_INT_OP
-		case LLVM_IR_Add:
-		case LLVM_IR_Sub:
-		case LLVM_IR_Mul:
-		case LLVM_IR_SDiv:
-		case LLVM_IR_UDiv:
-		case LLVM_IR_And:
-		case LLVM_IR_Or:
-		case LLVM_IR_Xor:
-		case LLVM_IR_Shl:
-		case LLVM_IR_AShr:
-		case LLVM_IR_LShr:
-#ifdef BYTE_OPS
-		case LLVM_IR_Add8:
-		case LLVM_IR_Sub8:
-		case LLVM_IR_Mul8:
-		case LLVM_IR_SDiv8:
-		case LLVM_IR_UDiv8:
-		case LLVM_IR_And8:
-		case LLVM_IR_Or8:
-		case LLVM_IR_Xor8:
-		case LLVM_IR_Shl8:
-		case LLVM_IR_AShr8:
-		case LLVM_IR_LShr8:
-#endif
-#ifdef CUSTOM_OPS
-		case LLVM_IR_APAdd:
-		case LLVM_IR_APSub:
-		case LLVM_IR_APMul:
-		case LLVM_IR_APDiv:
-#endif
-#endif
-			return true;
-		default:
 			return false;
 	}
 }
@@ -955,19 +895,21 @@ void XilinxHardwareProfile::setMemoryCurrentUsage(
 		uint64_t totalSizeInBytes = std::get<1>(it.second);
 		size_t wordSizeInBytes = std::get<2>(it.second);
 		unsigned scope = std::get<3>(it.second);
+		bool shouldCount = (ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ROVAR == scope || ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_RWVAR == scope)
+			|| (args.fArgRes && scope != ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_NOCOUNT);
 
 		// Partial partitioning or no partition
 		if(numOfPartitions) {
 			float sizeInBitsPerPartition = (totalSizeInBytes * 8) / (float) numOfPartitions;
 
-			if(args.fArgRes || (scope != ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ARG)) {
-				if(sizeInBitsPerPartition > (float) bramThresholdInBits) {
+			if(shouldCount) {
+				if(ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ARG == scope || sizeInBitsPerPartition > (float) bramThresholdInBits) {
 					uint64_t numOfBRAM18kPerPartition = nextPowerOf2((uint64_t) std::ceil(sizeInBitsPerPartition / (float) size18kInBits));
 					float efficiencyPerPartition = sizeInBitsPerPartition / (float) (numOfBRAM18kPerPartition * size18kInBits);
 					unsigned bram18kUsage = numOfPartitions * numOfBRAM18kPerPartition;
 
 					usedBRAM18k += bram18kUsage;
-					usedFF += (int) std::log2((sizeInBitsPerPartition / 8) / wordSizeInBytes) + 1;
+					memLogicFF += numOfPartitions * logNextPowerOf2((sizeInBitsPerPartition / 8) / wordSizeInBytes);
 
 					arrayNameToUsedBRAM18k.insert(std::make_pair(arrayName, bram18kUsage));
 					arrayNameToEfficiency.insert(std::make_pair(arrayName, efficiencyPerPartition));
@@ -977,8 +919,8 @@ void XilinxHardwareProfile::setMemoryCurrentUsage(
 					// For ROM: (1 * wordSizeInBytes * 8)
 					// For RAM: (2 * wordSizeInBytes * 8)
 					unsigned scopeFactor = (ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ROVAR == scope)? 1 : 2;
-					usedFF += (int) std::log2((sizeInBitsPerPartition / 8) / wordSizeInBytes) + 1 + (scopeFactor * wordSizeInBytes * 8);
-					usedLUT += sizeInBitsPerPartition / 8;
+					memLogicFF += numOfPartitions * (logNextPowerOf2((sizeInBitsPerPartition / 8) / wordSizeInBytes) + (scopeFactor * wordSizeInBytes * 8));
+					memLogicLUT += numOfPartitions * std::ceil(sizeInBitsPerPartition / 64);
 #else
 					// For RAM: (2 * wordSizeInBytes * 8)
 					usedFF += (int) std::log2((sizeInBitsPerPartition / 8) / wordSizeInBytes) + 1 + (2 * wordSizeInBytes * 8);
@@ -1000,12 +942,11 @@ void XilinxHardwareProfile::setMemoryCurrentUsage(
 			arrayNameToUsedBRAM18k.insert(std::make_pair(arrayName, 0));
 			arrayNameToEfficiency.insert(std::make_pair(arrayName, 0));
 
-			if(args.fArgRes || (scope != ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ARG))
-				usedFF += totalSizeInBytes * 8;
+			if(shouldCount)
+				memLogicFF += totalSizeInBytes * 8;
 		}
 
 		arrayAddPartitions(arrayName, numOfPartitions);
-		//arrayNameToWritePortsPerPartition[arrayName] = PER_PARTITION_PORTS_W;
 	}
 
 	// BRAM18k setting with partitioning does not fit in current device, will attempt without partitioning
@@ -1098,6 +1039,9 @@ void XilinxHardwareProfile::setMemoryCurrentUsage(
 				arrayPartitionToWritePortsInUse.insert(std::make_pair(arrayName, 0));
 			}
 		}
+
+		usedFF += memLogicFF;
+		usedLUT += memLogicLUT;
 	}
 }
 
@@ -1111,12 +1055,7 @@ void XilinxHardwareProfile::constrainHardware(
 	HardwareProfile::constrainHardware(arrayInfoCfgMap, partitionCfgMap, completePartitionCfgMap);
 }
 
-void XilinxHardwareProfile::fillPack(Pack &P) {
-#if 0
-	usedFF += registersAllocated * 32;
-	P.addDescriptor("Registers allocated", Pack::MERGE_MAX, Pack::TYPE_UNSIGNED);
-	P.addElement<uint64_t>("Registers allocated", registersAllocated);
-#endif
+void XilinxHardwareProfile::fillPack(Pack &P, unsigned loopLevel, unsigned datapathType, uint64_t targetII) {
 	P.addDescriptor("DSPs", Pack::MERGE_MAX, Pack::TYPE_UNSIGNED);
 	P.addElement<uint64_t>("DSPs", resourcesGetDSPs());
 	P.addDescriptor("FFs", Pack::MERGE_MAX, Pack::TYPE_UNSIGNED);
@@ -1126,12 +1065,78 @@ void XilinxHardwareProfile::fillPack(Pack &P) {
 	P.addDescriptor("BRAM18k", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
 	P.addElement<uint64_t>("BRAM18k", resourcesGetBRAM18k());
 
-	HardwareProfile::fillPack(P);
+	HardwareProfile::fillPack(P, loopLevel, datapathType, targetII);
 
 	for(auto &it : arrayGetUsedBRAM18k()) {
 		P.addDescriptor("Used BRAM18k for array \"" + demangleArrayName(it.first) + "\"", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
 		P.addElement<uint64_t>("Used BRAM18k for array \"" + demangleArrayName(it.first) + "\"", it.second);
 	}
+
+	/* Change FU count if pipeline is active */
+	unsigned finalFAddCount = targetII? std::ceil((float) totalFAddCount / (float) targetII) : fAddCount;
+	unsigned finalFSubCount = targetII? std::ceil((float) totalFSubCount / (float) targetII) : fSubCount;
+	unsigned finalFMulCount = targetII? std::ceil((float) totalFMulCount / (float) targetII) : fMulCount;
+	unsigned finalFDivCount = targetII? std::ceil((float) totalFDivCount / (float) targetII) : fDivCount;
+
+	// Count resources for FUs that are shared among DDDGs (floating point ops)
+#ifdef LEGACY_SEPARATOR
+	P.addDescriptor("_shared~fadd", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared~fadd", Pack::resourceNodeTy(finalFAddCount, finalFAddCount * fAddDSP, finalFAddCount * fAddFF, finalFAddCount * fAddLUT));
+	P.addDescriptor("_shared~fsub", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared~fsub", Pack::resourceNodeTy(finalFSubCount, finalFSubCount * fSubDSP, finalFSubCount * fSubFF, finalFSubCount * fSubLUT));
+	P.addDescriptor("_shared~fmul", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared~fmul", Pack::resourceNodeTy(finalFMulCount, finalFMulCount * fMulDSP, finalFMulCount * fMulFF, finalFMulCount * fMulLUT));
+	P.addDescriptor("_shared~fdiv", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared~fdiv", Pack::resourceNodeTy(finalFDivCount, finalFDivCount * fDivDSP, finalFDivCount * fDivFF, finalFDivCount * fDivLUT));
+#else
+	P.addDescriptor("_shared" GLOBAL_SEPARATOR "fadd", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fadd", Pack::resourceNodeTy(
+		finalFAddCount, finalFAddCount * fAddDSP, finalFAddCount * fAddFF, finalFAddCount * fAddLUT
+	));
+	P.addDescriptor("_shared" GLOBAL_SEPARATOR "fsub", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fsub", Pack::resourceNodeTy(
+		finalFSubCount, finalFSubCount * fSubDSP, finalFSubCount * fSubFF, finalFSubCount * fSubLUT
+	));
+	P.addDescriptor("_shared" GLOBAL_SEPARATOR "fmul", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fmul", Pack::resourceNodeTy(
+		finalFMulCount, finalFMulCount * fMulDSP, finalFMulCount * fMulFF, finalFMulCount * fMulLUT
+	));
+	P.addDescriptor("_shared" GLOBAL_SEPARATOR "fdiv", Pack::MERGE_RESOURCELISTMAX, Pack::TYPE_RESOURCENET);
+	P.addElement<Pack::resourceNodeTy>("_shared" GLOBAL_SEPARATOR "fdiv", Pack::resourceNodeTy(
+		finalFDivCount, finalFDivCount * fDivDSP, finalFDivCount * fDivFF, finalFDivCount * fDivLUT
+	));
+#endif
+
+	// Count resources for FUs that are not shared among DDDGs (int ops)
+	// We assume that Vivado HLS allocates the FU needed to solve each DDDG separately
+	// and then sum it up (before0 + after0 + before1 + after1 + ... + inner).
+	// We only consider betweenX if it is larger than beforeX + afterX!
+#ifdef CONSTRAIN_INT_OP
+	for(auto &it : constrainedIntOps) {
+		unsigned finalIntOpCount = targetII? std::ceil((float) totalIntOpCount[it] / (float) targetII) : intOpCount[it];
+
+#ifdef LEGACY_SEPARATOR
+		std::string descriptor = "_unshared~" + reverseOpcodeMap.at(it);
+#else
+		std::string descriptor = "_unshared" GLOBAL_SEPARATOR + reverseOpcodeMap.at(it);
+#endif
+
+		P.addDescriptor(descriptor, Pack::MERGE_RESOURCETREEMAX, Pack::TYPE_RESOURCENET);
+		P.addElement<Pack::resourceNodeTy>(descriptor, Pack::resourceNodeTy(
+			loopLevel, datapathType,
+			finalIntOpCount,
+			finalIntOpCount * intOpResources[it].dsp,
+			finalIntOpCount * intOpResources[it].ff,
+			finalIntOpCount * intOpResources[it].lut
+		));
+	}
+#endif
+
+	// Save LUT and FF used for array partitioning logic
+	P.addDescriptor("_memlogicFF", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
+	P.addElement<uint64_t>("_memlogicFF", memLogicFF);
+	P.addDescriptor("_memlogicLUT", Pack::MERGE_EQUAL, Pack::TYPE_UNSIGNED);
+	P.addElement<uint64_t>("_memlogicLUT", memLogicLUT);
 }
 
 void XilinxHardwareProfile::arrayAddPartition(std::string arrayName) {
@@ -1150,57 +1155,9 @@ void XilinxHardwareProfile::arrayAddPartitions(std::string arrayName, unsigned a
 		found->second = amount;
 }
 
-#if 0
-bool XilinxHardwareProfile::arrayPartitionReplicate(std::string partitionName, bool commit) {
-#ifdef LEGACY_SEPARATOR
-	size_t tagPos = partitionName.find("-");
-#else
-	size_t tagPos = partitionName.find(GLOBAL_SEPARATOR);
-#endif
-	std::string arrayName = partitionName.substr(0, tagPos);
-	std::tuple<uint64_t, uint64_t, size_t, unsigned> config = arrayNameToConfig.at(arrayName);
-
-	// We could store this value instead of recalculating, but oh well
-	const size_t size18kInBits = 18 * 1024;
-	const size_t bramThresholdInBits = 1024;
-	float sizeInBitsPerPartition = (std::get<1>(config) * 8) / (float) std::get<0>(config);
-	unsigned bram18kUsage = nextPowerOf2((uint64_t) std::ceil(sizeInBitsPerPartition / (float) size18kInBits));
-
-	std::map<std::string, unsigned>::iterator found = arrayPartitionToReadPorts.find(partitionName);
-	assert(found != arrayPartitionToReadPorts.end() && "Array has no storage allocated for it");
-
-	// Only possible with non-distributed ROMs!
-	if((std::get<3>(config) != ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ROVAR) || (sizeInBitsPerPartition <= (float) bramThresholdInBits))
-		return false;
-
-	if(isConstrained) {
-		if(found->second + PER_PARTITION_PORTS_R <= romArrayGetMaximumReadPortsPerPartition()) {
-			if((usedBRAM18k + bram18kUsage) > maxBRAM18k)
-				return false;
-		}
-		else {
-			return false;
-		}
-	}
-
-	if(commit) {
-		usedBRAM18k += bram18kUsage;
-		found->second += PER_PARTITION_PORTS_R;
-	}
-
-	return true;
-}
-#endif
-
 unsigned XilinxHardwareProfile::arrayGetMaximumWritePortsPerPartition() {
 	return PER_PARTITION_MAX_PORTS_W;
 }
-
-#if 0
-unsigned XilinxHardwareProfile::romArrayGetMaximumReadPortsPerPartition() {
-	return PER_PARTITION_MAX_PORTS_R_ROM;
-}
-#endif
 
 bool XilinxHardwareProfile::fAddAddUnit(bool commit) {
 	// Hardware is constrained, we must first check if it is possible to add a new unit
@@ -1290,11 +1247,6 @@ bool XilinxHardwareProfile::intOpAddUnit(unsigned opcode, bool commit) {
 	return true;
 }
 #endif
-
-void XilinxHardwareProfile::regStoreLiveOps(std::set<unsigned> &liveOps, const std::unordered_map<int, unsigned> &resultSizeList) {
-	for(auto &it : liveOps)
-		usedFF += resultSizeList.at(it);
-}
 
 void XilinxVC707HardwareProfile::setResourceLimits() {
 	if(args.fNoFPUThresOpt) {
