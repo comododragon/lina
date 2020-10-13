@@ -951,15 +951,17 @@ void InstrumentForDDDG::loopBasedTraceAnalysis() {
 		}
 	}
 
-	closeSummaryFile();
-	VERBOSE_PRINT(errs() << "[][loopBasedTraceAnalysis] Summary file closed\n");
-
 #ifdef FUTURE_CACHE
 	if(args.futureCache) {
+		futureCache.dumpSummary(&summaryFile);
+
 		VERBOSE_PRINT(errs() << "[][loopBasedTraceAnalysis] Saving future cache\n");
 		futureCache.save();
 	}
 #endif
+
+	closeSummaryFile();
+	VERBOSE_PRINT(errs() << "[][loopBasedTraceAnalysis] Summary file closed\n");
 
 	VERBOSE_PRINT(errs() << "[][loopBasedTraceAnalysis] Finished\n");
 

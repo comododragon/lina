@@ -499,8 +499,6 @@ uint64_t BaseDatapath::fpgaEstimation() {
 			}
 		}
 	}
-	// XXX: There is still missing reports for resII, resIIMem and resIIOp. I have to think on a better way of
-	// merging these values when multiple DDDGs are generated
 
 	return numCycles;
 }

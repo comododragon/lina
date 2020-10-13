@@ -42,10 +42,15 @@ public:
 
 private:
 	std::map<std::string, elemTy> cache;
+	unsigned cacheMiss;
+	unsigned cacheHit;
 
 	std::string constructKey(std::string wholeLoopName, unsigned datapathType, long int progressiveTraceCursor, uint64_t progressiveTraceInstCount);
 
 public:
+	FutureCache() : cacheMiss(0), cacheHit(0) { };
+	void dumpSummary(std::ofstream *summaryFile);
+
 	bool load();
 	void save();
 
@@ -55,7 +60,7 @@ public:
 		long int progressiveTraceCursor, uint64_t progressiveTraceInstCount,
 		elemTy &elem
 	);
-	void clear() { cache.clear(); }
+	void clear() { cache.clear(); cacheMiss = 0; cacheHit = 0; }
 	iterator end() { return cache.end(); }
 };
 

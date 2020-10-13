@@ -14,6 +14,12 @@ std::string FutureCache::constructKey(
 #endif
 }
 
+void FutureCache::dumpSummary(std::ofstream *summaryFile) {
+	*summaryFile << "================================================\n";
+	*summaryFile << "No. of cache miss: " << std::to_string(cacheMiss) << "\n";
+	*summaryFile << "No. of cache hit: " << std::to_string(cacheHit) << "\n";
+}
+
 bool FutureCache::load() {
 	std::ifstream futureCacheFile;
 
@@ -28,7 +34,7 @@ bool FutureCache::load() {
 			return false;
 		}
 
-		cache.clear();
+		clear();
 		/* Read cache size */
 		size_t mapSize;
 		futureCacheFile.read((char *) &mapSize, sizeof(size_t));
@@ -109,7 +115,14 @@ FutureCache::iterator FutureCache::find(
 	std::string wholeLoopName, unsigned datapathType,
 	long int progressiveTraceCursor, uint64_t progressiveTraceInstCount
 ) {
-	return cache.find(constructKey(wholeLoopName, datapathType, progressiveTraceCursor, progressiveTraceInstCount));
+	FutureCache::iterator iter = cache.find(constructKey(wholeLoopName, datapathType, progressiveTraceCursor, progressiveTraceInstCount));
+
+	if(cache.end() == iter)
+		cacheMiss++;
+	else
+		cacheHit++;
+
+	return iter;
 }
 
 std::pair<FutureCache::iterator, bool> FutureCache::insert(
@@ -972,7 +985,7 @@ intervalTy DDDGBuilder::getTraceLineFromToAfterNestedLoop(gzFile &traceFile) {
 			progressiveTraceInstCount = cacheHit->second.progressiveTraceInstCount;
 			to = cacheHit->second.to;
 
-			// TODO remove afterwards?
+			// TODO to be removed on release
 			assert(!to && "Value of \"to\" is not zero, this could likely be a bug");
 
 			firstTraverse = false;
@@ -1099,7 +1112,7 @@ intervalTy DDDGBuilder::getTraceLineFromToBetweenAfterAndBefore(gzFile &traceFil
 			byteFrom = cacheHit->second.byteFrom;
 			instCount = cacheHit->second.instCount;
 
-			// TODO remove afterwards?
+			// TODO to be removed on release
 			assert(progressiveTraceCursor == cacheHit->second.progressiveTraceCursor && "progressiveTraceCursor from past and now are different in a BETWEEN DDDG");
 			assert(progressiveTraceInstCount == cacheHit->second.progressiveTraceInstCount && "progressiveTraceInstCount from past and now are different in a BETWEEN DDDG");
 
@@ -1328,7 +1341,7 @@ intervalTy DDDGBuilder::getTraceLineFromTo(gzFile &traceFile) {
 				lastInstExitingCounter = cacheHit->second.lastInstExitingCounter;
 				to = cacheHit->second.to;
 
-				// TODO remove afterwards?
+				// TODO to be removed on release
 				assert(!lastInstExitingCounter && "Value of \"lastInstExitingCounter\" is not zero, this could likely be a bug");
 				assert(!to && "Value of \"to\" is not zero, this could likely be a bug");
 
@@ -1339,7 +1352,7 @@ intervalTy DDDGBuilder::getTraceLineFromTo(gzFile &traceFile) {
 			}
 		}
 		else {
-			// TODO Change from assert to warning!
+			// TODO change to warning on release
 			assert(false && "Future cache activated with runtime loop bounds");
 			//VERBOSE_PRINT(errs() << "\t\tUnknown loop bounds, will be calculated from trace now\n");
 			//VERBOSE_PRINT(errs() << "\t\tWarning: Future cache is disabled due to runtime loop bound calculation!\n");

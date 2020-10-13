@@ -915,17 +915,11 @@ void XilinxHardwareProfile::setMemoryCurrentUsage(
 					arrayNameToEfficiency.insert(std::make_pair(arrayName, efficiencyPerPartition));
 				}
 				else {
-#if 1
 					// For ROM: (1 * wordSizeInBytes * 8)
 					// For RAM: (2 * wordSizeInBytes * 8)
 					unsigned scopeFactor = (ConfigurationManager::arrayInfoCfgTy::ARRAY_SCOPE_ROVAR == scope)? 1 : 2;
 					memLogicFF += numOfPartitions * (logNextPowerOf2((sizeInBitsPerPartition / 8) / wordSizeInBytes) + (scopeFactor * wordSizeInBytes * 8));
 					memLogicLUT += numOfPartitions * std::ceil(sizeInBitsPerPartition / 64);
-#else
-					// For RAM: (2 * wordSizeInBytes * 8)
-					usedFF += (int) std::log2((sizeInBitsPerPartition / 8) / wordSizeInBytes) + 1 + (2 * wordSizeInBytes * 8);
-					usedLUT += sizeInBitsPerPartition / 8;
-#endif
 
 					arrayNameToUsedBRAM18k.insert(std::make_pair(arrayName, 0));
 					arrayNameToEfficiency.insert(std::make_pair(arrayName, 0));

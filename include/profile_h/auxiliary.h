@@ -178,13 +178,9 @@ public:
 	struct arrayInfoCfgTy {
 		enum {
 			ARRAY_SCOPE_ARG,
-#if 1
 			ARRAY_SCOPE_ROVAR,
 			ARRAY_SCOPE_RWVAR,
 			ARRAY_SCOPE_NOCOUNT
-#else
-			ARRAY_SCOPE_VAR
-#endif
 		};
 		uint64_t totalSize;
 		size_t wordSize;
