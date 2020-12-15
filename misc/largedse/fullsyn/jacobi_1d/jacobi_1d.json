@@ -1,0 +1,21 @@
+{
+	"platform": "zcu104",
+	"part": "xczu7ev-ffvc1156-2-e",
+	"frequencies": [75, 100, 150, 200],
+	"loops": [
+		{
+			"line": 4,
+			"bound": 4998,
+			"unrolling": [2, 3],
+			"pipelining": true,
+			"nest": {}
+		}
+	],
+	"arrays": {
+		"A": {"words": 5000, "size": 4, "block": [], "cyclic": [], "complete": false, "forcescope": "nocount"},
+		"B": {"words": 5000, "size": 4, "block": [], "cyclic": [], "complete": false, "forcescope": "nocount"},
+		"lA": {"words": 5000, "size": 4, "block": [2], "cyclic": [], "complete": false, "forcescope": "rwvar"},
+		"lB": {"words": 5000, "size": 4, "block": [2], "cyclic": [], "complete": false, "forcescope": "rwvar"}
+	},
+	"inarrays": {}
+}

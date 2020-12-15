@@ -1,0 +1,36 @@
+{
+	"platform": "zcu104",
+	"part": "xczu7ev-ffvc1156-2-e",
+	"frequencies": [75, 100, 150, 200],
+	"loops": [
+		{
+			"line": 4,
+			"bound": 80,
+			"unrolling": [],
+			"pipelining": false,
+			"nest": {
+				"line": 5,
+				"bound": 80,
+				"nonperfect": [true, false],
+				"unrolling": [],
+				"pipelining": false,
+				"nest": {
+					"line": 8,
+					"bound": 60,
+					"unrolling": [2],
+					"pipelining": true,
+					"nest": {}
+				}
+			}
+		}
+	],
+	"arrays": {
+		"C": {"words": 6400, "size": 4, "block": [], "cyclic": [], "complete": false, "forcescope": "nocount"},
+		"A": {"words": 4800, "size": 4, "block": [], "cyclic": [], "complete": false, "forcescope": "nocount"},
+		"B": {"words": 4800, "size": 4, "block": [], "cyclic": [], "complete": false, "forcescope": "nocount"},
+		"lC": {"words": 6400, "size": 4, "block": [2], "cyclic": [], "complete": false, "forcescope": "rwvar"},
+		"lA": {"words": 4800, "size": 4, "block": [2], "cyclic": [], "complete": false, "forcescope": "rwvar"},
+		"lB": {"words": 4800, "size": 4, "block": [2], "cyclic": [], "complete": false, "forcescope": "rwvar"}
+	},
+	"inarrays": {}
+}

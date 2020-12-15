@@ -48,14 +48,21 @@ Compilation of Lina was tested in the following systems:
 Before proceeding to compilation, you must ensure that the following packages are installed:
 
 * GNU Compiler Collection. For Ubuntu, run:
-	```$ sudo apt-get install build-essential```
+	```
+	$ sudo apt-get install build-essential
+	```
 * ZLIB development libraries. For Ubuntu, run:
-	```$ sudo apt-get install zlib1g-dev```
+	```
+	$ sudo apt-get install zlib1g-dev
+	```
 * GIT. For Ubuntu, run:
-	```$ sudo apt-get install git```
+	```
+	$ sudo apt-get install git
+	```
 * CMAKE. For Ubuntu, run:
-	```$ sudo apt-get install cmake```
-
+	```
+	$ sudo apt-get install cmake
+	```
 *You can also compile LLVM using other toolchains, such as ```clang```. Please see https://releases.llvm.org/3.5.0/docs/GettingStarted.html*
 
 At last, the relation between ```cmake``` and ```zlib``` is quite tricky, mainly in Ubuntu. We are assuming here that installing the ```zlib``` package will put the shared library ```zlib.so``` at ```/usr/lib```. Ubuntu puts ```zlib``` on a different location and this breaks compilation. **Please make sure that you have a valid library (or a link to) at the /usr/lib/libz.so location.** You can do that by listing the file:
@@ -491,6 +498,8 @@ When cache is active, Lina will search for a file named ```<WORKDIR>/futurecache
 ***NOTE: This section describes how to perform an exploration using a newer DSE infrastructure. To use the small DSE tools from the FPT-2019 paper, please see **Perform a Small Exploration** section from the older README.md (https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md).***
 
 We made available in folder ```misc/largedse``` the DSE infrastructure that we used to validate Lina. The PolyBench/C kernels used are available in the folder ```misc/largedse/hls``` and ```misc/largedse/fullsyn```. The ```hls``` experiment holds kernels that are created to be compared against Vivado HLS results, whereas the ```fullsyn``` kernels are tailored to be compared against SDSoC results.
+
+Some kernels were slightly modified in order to be compatible with Lina. See ```misc/largedse/CHANGES``` for more details (due to non-disclosure properties of the AES kernels, they are currently not available in this repository).
 
 Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an example:
 

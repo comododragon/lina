@@ -1,0 +1,21 @@
+Some kernels were adapted in order to make them compatible, since Lina does not support more than
+one loop nest in a same loop level, arbitrary-precision data types or variable loop bounds.
+Preserving functional behaviour, the following modifications were performed:
+
+	* It is assumed that arrays are delivered initialised to the kernels, thus we removed loops
+	  that initialised the data to zero from within the kernels (bicg and gesummv);
+
+	* We replaced variable loop bounds with their upper possible values (syr2k and syrk);
+
+	* Some kernels have a top-level loop that swaps the input and output buffers at every
+	  iteration. We promoted the buffer swap to happen outside of the kernel, therefore this
+	  top-level loop is removed while its sub-loops are kept (heat_3d, jacobi_1d and jacobi_2d);
+
+	* We reordered and merged sub-loops to ensure that each loop level is composed only of a single
+	  sub-loop nest (gemm, syr2k and syrk);
+
+	* We replaced arbitrary-precision data types to the closest regular type (in all AES kernels,
+	  e.g. small types became char or int while wide bit values became arrays of char or int);
+
+	* We inlined functions that were being called in the kernels (Galois field arithmetics in
+	  MixColumns).
