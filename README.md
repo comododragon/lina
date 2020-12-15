@@ -19,13 +19,13 @@ For more information regarding Lina, please refer to our paper (see Section **Pu
 There are two versions of Lina in this repository:
 
 * The Lina version used in the FPT-2019 paper does not implement the most recent fine tuning and also the resource estimation part. To use this version of the tool, please refer to commit d85c4a4 (https://github.com/comododragon/lina/tree/d85c4a49019027a41970b5e11aa14558951efe35) or run:
-```
-$ git clone https://github.com/comododragon/lina.git
-$ git checkout d85c4a4
-```
+	```
+	$ git clone https://github.com/comododragon/lina.git
+	$ git checkout d85c4a4
+	```
 * For the version of Lina including the resource estimation, you can use the most recent commit
 
-Unless there is a valid reason to use the older repository (e.g. to understand the results from FPT-2019 paper), please use the most recent version for a refined estimation and performance optimisations.
+**Unless there is a valid reason to use the older repository (e.g. to understand the results from FPT-2019 paper), please use the most recent version for a refined estimation and performance optimisations.**
 
 ## Licence
 
@@ -48,17 +48,13 @@ Compilation of Lina was tested in the following systems:
 Before proceeding to compilation, you must ensure that the following packages are installed:
 
 * GNU Compiler Collection. For Ubuntu, run:
-
-```$ sudo apt-get install build-essential```
+	```$ sudo apt-get install build-essential```
 * ZLIB development libraries. For Ubuntu, run:
-
-```$ sudo apt-get install zlib1g-dev```
+	```$ sudo apt-get install zlib1g-dev```
 * GIT. For Ubuntu, run:
-
-```$ sudo apt-get install git```
+	```$ sudo apt-get install git```
 * CMAKE. For Ubuntu, run:
-
-```$ sudo apt-get install cmake```
+	```$ sudo apt-get install cmake```
 
 *You can also compile LLVM using other toolchains, such as ```clang```. Please see https://releases.llvm.org/3.5.0/docs/GettingStarted.html*
 
@@ -185,10 +181,10 @@ Calling ```lina -h``` will show you the help, which is pretty self-explanatory. 
 	* ```trace```: execute only traced execution, generating the dynamic trace. Lina hangs before performance estimation;
 	* ```estimation```: execute only performance estimation. The dynamic trace must be already generated;
 * ```-t TARGET``` or ```--target=TARGET```: select the FPGA to perform cycle estimation:
-	* ```ZC702:``` Xilinx Zynq-7000 SoC (DEFAULT);
-	* ```ZCU102:``` Xilinx Zynq UltraScale+ ZCU102 kit;
-	* ```ZCU104:``` Xilinx Zynq UltraScale+ ZCU104 kit;
-	* ```VC707:``` Xilinx Virtex-7 FPGA;
+	* ```ZC702```: Xilinx Zynq-7000 SoC (DEFAULT);
+	* ```ZCU102```: Xilinx Zynq UltraScale+ ZCU102 kit;
+	* ```ZCU104```: Xilinx Zynq UltraScale+ ZCU104 kit;
+	* ```VC707```: Xilinx Virtex-7 FPGA;
 * ```-v``` or ```--verbose```: show more details about the estimation process and the results;
 * ```-C``` or ```--future-cache```: use cache file to save trace cursors and speed up further executions of Lina (see **Enabling Design Space Exploration**);
 * ```-f FREQ``` or ```--frequency=FREQ```: specify the target clock, in MHz;
@@ -343,9 +339,9 @@ int main(void) {
 	================================================
 	```
 	* **NOTE:** No BRAM usage was reported, since arguments are by default not resource-counted (so as Vivado HLS does). To enable resource count for arguments, please either set your array to be ```rwvar``` or ```rovar``` in the ```config.cfg``` file **OR** use ```--f-argres```;
-	* **NOTE2:** Lina will output resource estimates to console when running with ```-v```. Please disregard these values and prefer to use the values shown in the summmary file as above.
+	* **NOTE2:** Lina will output resource estimates to console when running with ```-v```. **Please disregard these values and prefer to use the values shown in the summary file as above.**
 
-We can compare the results against the reports from Vivado. In this case, we used Vivado HLS 2018.2 for the ZCU102 Xilinx UltraScale+ Board.
+We can compare the results against the reports from Vivado. In this case, we used Vivado HLS 2018.2 for the ZCU104 Xilinx UltraScale+ Board.
 
 1. We have to modify ```test.cpp``` to insert the unrolling pragmas for Vivado:
 	```
@@ -444,10 +440,10 @@ Now line by line:
 	* Equivalent to ```uint32_t A[1024];```
 	* All arrays of the kernel must be declared here;
 	* The last argument indicates whether and how Lina should count the resources for the array:
-		* ```arg:``` array is considered an argument (DEFAULT if omitted). No resource count is performed for this array unless Lina is executed with ```--f-argres```;
-		* ```rovar:``` array is considered a read-only memory block and Lina will consider its resource count;
-		* ```rwvar:``` array is considered a read-write memory block and Lina will consider its resource count;
-		* ```nocount:``` force this array to be never counted, regardless of ```--f-argres``` being present or not;
+		* ```arg```: array is considered an argument (DEFAULT if omitted). No resource count is performed for this array unless Lina is executed with ```--f-argres```;
+		* ```rovar```: array is considered a read-only memory block and Lina will consider its resource count;
+		* ```rwvar```: array is considered a read-write memory block and Lina will consider its resource count;
+		* ```nocount```: force this array to be never counted, regardless of ```--f-argres``` being present or not;
 * ```unrolling,mvp,0,1,4,4```
 	* Set unroll. The arguments are the kernel name, the top-level loop ID (starts from 0), the loop depth (1 is the top-level), the loop header line number and the unroll factor;
 	* Equivalent to ```#pragma HLS unroll factor=4```
@@ -479,9 +475,10 @@ The idea of Lina is to provide fast estimations for design space exploration. Li
 #### Trace Cache
 
 At every run of Lina, a traversal is performed on the dynamic trace file to generate the DDDGs. This traversal can slow the exploration down significantly if for many design points a significant amount of instructions are traversed prior to DDDG generation. Lina implements a trace cursor cache that saves information about the trace cursor for future executions of Lina for the same exploration. To activate the cache, simply use ```-C```:
-	```
-	$ lina --mode=estimation --config-file=config.cfg --target=ZCU104 --loops=0 -C test_opt.bc mvp
-	```
+
+```
+$ lina --mode=estimation --config-file=config.cfg --target=ZCU104 --loops=0 -C test_opt.bc mvp
+```
 
 When cache is active, Lina will search for a file named ```<WORKDIR>/futurecache.db```, where ```<WORKDIR>``` is the working directory as defined by the ```-i``` argument (DEFAULT to ```.```). If this file is found, Lina will use it as a trace cursor cache, and save further cache hits after execution. If the file is not found, Lina generates a new empty one. This cache can significantly improve the performance of Lina by reducing the amount of redundant computations.
 
@@ -498,15 +495,15 @@ We made available in folder ```misc/largedse``` the DSE infrastructure that we u
 Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an example:
 
 1. Compile Lina following the instructions from Sections ***Setup*** and ***Compilation***;
-	* We will refer to the path for this version as ```/path/to/new/lina/build/bin```;
+	* We will refer to the path for this version as ```/path/to/lina/build/bin```;
 2. You will also need Python 3. Please install it using your OS repository. For example in Ubuntu:
 	```
 	$ sudo apt-get install python3
 	```
 3. Generate the exploration workspace. This will create the folder ```workspace/hls/bicg``` where all design points are generated as separate Lina projects:
 	```
-	$ ./run.py PATH=/path/to/new/lina/build/bin generate hls bicg
-	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	$ ./run.py PATH=/path/to/lina/build/bin generate hls bicg
+	INFO: Option PATH set to /path/to/lina/build/bin
 	===========================================================================
 	Generating design points for bicg                                                                                                      
 	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
@@ -517,8 +514,8 @@ Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an exampl
 	* The compilation stdout/stderr can be found at ```workspace/hls/bicg/base/make.out```;
 4. Generate the trace file for this kernel:
 	```
-	$ ./run.py PATH=/home/perina/Desktop/DD/Stage2/tools/lina/build/bin trace hls bicg   
-	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	$ ./run.py PATH=/path/to/lina/build/bin trace hls bicg   
+	INFO: Option PATH set to /path/to/lina/build/bin
 	===========================================================================
 	Generating trace for bicg                                                                                                              
 	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
@@ -530,8 +527,8 @@ Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an exampl
 	* The trace generation stdout/stderr can be found at ```workspace/hls/bicg/base/lina.trace.out```;
 5. Now run the exploration. In this case we will use the trace cache and 4 parallel threads:
 	```
-	$ ./run.py PATH=/home/perina/Desktop/DD/Stage2/tools/lina/build/bin JOBS=4 explore hls bicg
-	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	$ ./run.py PATH=/path/to/lina/build/bin JOBS=4 explore hls bicg
+	INFO: Option PATH set to /path/to/lina/build/bin
 	INFO: Option JOBS set to 4
 	===========================================================================
 	Exploring bicg (job 1)                                                                                                                 
@@ -556,8 +553,8 @@ Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an exampl
 	* The exploration stdout/stderr can be found at ```workspace/hls/bicg/base/lina.explore.X.out```, where ```X``` is a thread ID;
 6. Finally generate a csv file containing the results:
 	```
-	$ ./run.py PATH=/home/perina/Desktop/DD/Stage2/tools/lina/build/bin collect hls bicg 
-	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	$ ./run.py PATH=/path/to/lina/build/bin collect hls bicg 
+	INFO: Option PATH set to /path/to/lina/build/bin
 	===========================================================================
 	Collecting bicg                                                                                                                        
 	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
@@ -721,10 +718,10 @@ The required information are:
 ## Supported Platforms
 
 Currently three platforms are supported:
-* ```ZC702:``` Xilinx Zynq-7000 SoC (DEFAULT);
-* ```ZCU102:``` Xilinx Zynq UltraScale+ ZCU102 kit;
-* ```ZCU104:``` Xilinx Zynq UltraScale+ ZCU104 kit;
-* ```VC707:``` Xilinx Virtex-7 FPGA.
+* ```ZC702```: Xilinx Zynq-7000 SoC (DEFAULT);
+* ```ZCU102```: Xilinx Zynq UltraScale+ ZCU102 kit;
+* ```ZCU104```: Xilinx Zynq UltraScale+ ZCU104 kit;
+* ```VC707```: Xilinx Virtex-7 FPGA.
 
 You can select one by specifying the ```-t``` or ```--target``` option.
 
