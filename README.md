@@ -14,6 +14,31 @@ Lina is an expansion of the Lin-Analyzer project (see https://github.com/zhguanw
 
 For more information regarding Lina, please refer to our paper (see Section **Publications**).
 
+## Table of Contents
+
+1. [Versions](#versions)
+2. [Licence](#licence)
+3. [Setup](#setup)
+4. [Compilation](#compilation)
+	1. [Automatic Compilation](#automatic-compilation)
+	2. [Manual Compilation](#manual-compilation)
+5. [Usage](#usage)
+	1. [Use by Example](#use-by-example)
+	2. [Configuration File](#configuration-file)
+	3. [Enabling Design Space Exploration](#enabling-design-space-exploration)
+		1. [Trace Cache](#trace-cache)
+6. [Perform an Exploration](#perform-an-exploration)
+	1. [The run.py Script](#the-run.py-script)
+	2. [Setting Up a New Exploration](#setting-up-a-new-exploration)
+	3. [JSON Description File](#json-description-file)
+7. [Supported Platforms](#supported-platforms)
+	1. [Adding a New Platform](#adding-a-new-platform)
+8. [Files Description](#files-description)
+9. [Troubleshooting](#troubleshooting)
+	1. ["is private within this context"](#is-private-within-this-context)
+	2. [Problems with Parallel Compilation](#problems-with-parallel-compilation)
+10. [Acknowledgements](#acknowledgments)
+
 ## Versions
 
 There are two versions of Lina in this repository:
@@ -796,7 +821,7 @@ Several points of the code must be adjusted if you want to insert a new platform
 		* ***hls:*** the ```hls``` experiment;
 		* ***run.py:*** the DSE tool;
 		* ***workspace:*** exploration workspace for the experiments/kernels;
-	* ***smalldse:*** small exploration with 9 PolyBench-based kernels (FPT-2018 PAPER);
+	* ***smalldse:*** small exploration with 9 PolyBench-based kernels (FPT-2019 PAPER);
 		* ***baseFiles:*** common files that are shared among design points;
 			* ***makefiles:*** Makefiles used by Lina or Vivado;
 			* ***parsers:*** parser scripts used by the main python script;
