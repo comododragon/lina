@@ -6,9 +6,26 @@
 
 Lina is a pre-HLS performance estimator for C/C++ codes targetting Xilinx FPGAs with Vivado HLS or its variants. Given a C/C++ code, it generates the Dynamic Data Dependence Graph (DDDG) and schedules its nodes to estimate the performance (cycle count) of the code for the Vivado HLS toolchain. Several optimisation directives (e.g. loop unroll, pipelining) can be provided and Lina estimates the performance according to those constraints. Lina enables fast design space exploration by providing results in significantly less time than FPGA synthesis or even the HLS compilation process.
 
-Lina is an expansion of the Lin-Analyzer project (see https://github.com/zhguanw/lin-analyzer). It uses the same traced execution and (pretty much the same) DDDG scheduling. However, Lina adds Timing-Constrained Scheduling (TCS) and Non-Perfect Loop Analysis (NPLA). The TCS provides a more precise estimation considering a user-provided operational frequency for the design, while NPLA generalises the estimation to non-perfect loop nests. Moreover, Lina has some improved logic to estimate certain border cases where Lin-Analyzer did not properly estimate.
+Lina is an expansion of the Lin-Analyzer project (see https://github.com/zhguanw/lin-analyzer). It uses the same traced execution and (pretty much the same) DDDG scheduling. Lina's expansion include:
 
-For more information regarding Lina, please refer to our paper (see Section ***Publications***).
+* A Timing-Constrained Scheduler (TCS) that supports a continuous interval of operating clock frequencies;
+* A Non-Perfect Loop Analysis (NPLA), which allows a finer estimation of non-perfect loop nests by generating DDDGs for different segments of the loop nest;
+* A comprehensive resource estimation that considers the usage of integer FUs, floating-point FUs, supporting computations (e.g. loop/array indexing), intermediate registers, multiplexing and memory related resources (e.g. distributed RAM or completetly partitioned arrays).
+
+For more information regarding Lina, please refer to our paper (see Section **Publications**).
+
+## Versions
+
+There are two versions of Lina in this repository:
+
+* The Lina version used in the FPT-2019 paper does not implement the most recent fine tuning and also the resource estimation part. To use this version of the tool, please refer to commit d85c4a4 (https://github.com/comododragon/lina/tree/d85c4a49019027a41970b5e11aa14558951efe35) or run:
+```
+$ git clone https://github.com/comododragon/lina.git
+$ git checkout d85c4a4
+```
+* For the version of Lina including the resource estimation, you can use the most recent commit
+
+Unless there is a valid reason to use the older repository (e.g. to understand the results from FPT-2019 paper), please use the most recent version for a refined estimation and performance optimisations.
 
 ## Licence
 
@@ -18,7 +35,7 @@ According to Lin-Analyzer repository: *"Dynamic data graph generation (DDDG) and
 
 The ```common.h``` header is distributed under the GPL-3.0 licence. See the following repo for details: https://github.com/comododragon/commonh
 
-The kernels in folder ```misc/smalldse``` are adapted from PolyBench/C, which follows the GPL-2.0 licence. Please see: https://sourceforge.net/projects/polybench/
+PolyBench/C kernels are used in ```misc/smalldse``` and ```misc/largedse```, which follows the GPL-2.0 licence. Please see: https://sourceforge.net/projects/polybench/
 
 ## Setup
 
@@ -45,7 +62,7 @@ Before proceeding to compilation, you must ensure that the following packages ar
 
 *You can also compile LLVM using other toolchains, such as ```clang```. Please see https://releases.llvm.org/3.5.0/docs/GettingStarted.html*
 
-At last, the relation between ```cmake``` and ```zlib``` is quite tricky, mainly in Ubuntu. We are assuming here that installing the ```zlib``` package will put the shared library ```zlib.so``` at ```/usr/lib```. Ubuntu puts ```zlib``` on a different location and this breaks compilation. ***Please make sure that you have a valid library (or a link to) at the /usr/lib/libz.so location.*** You can do that by listing the file:
+At last, the relation between ```cmake``` and ```zlib``` is quite tricky, mainly in Ubuntu. We are assuming here that installing the ```zlib``` package will put the shared library ```zlib.so``` at ```/usr/lib```. Ubuntu puts ```zlib``` on a different location and this breaks compilation. **Please make sure that you have a valid library (or a link to) at the /usr/lib/libz.so location.** You can do that by listing the file:
 ```
 $ ls /usr/lib/libz.so
 ```
@@ -60,21 +77,15 @@ Alternatively, you can change the compiler script (or the ```cmake``` command if
 
 ## Compilation
 
-***Please note that Lina is still receiving updates and its latest commit might be unstable. To use the last stable version (as presented in the paper), please use commit d85c4a4:***
-```
-$ git clone https://github.com/comododragon/lina.git
-$ git checkout d85c4a4
-```
-
-You can either compile Lina by using the automated compiling script, or manually by following the instructions presented in Section ***Manual Compilation***.
+You can either compile Lina by using the automated compiling script, or manually by following the instructions presented in Section **Manual Compilation**.
 
 ### Automatic Compilation
 
-We have provided an automated BASH compilation script at ```misc/compiler.sh```. It simply follows the instructions from ***Manual Compilation*** and applies patches automatically if necessary.
+We have provided an automated BASH compilation script at ```misc/compiler.sh```. It simply follows the instructions from **Manual Compilation** and applies patches automatically if necessary.
 
 To use automatic compilation:
 
-1. Make sure you read and understood the Section ***Setup*** (in other words, make sure that you have ```gcc```, ```zlib```, ```git``` and ```cmake```);
+1. Make sure you read and understood the Section **Setup** (in other words, make sure that you have ```gcc```, ```zlib```, ```git``` and ```cmake```);
 2. Download the automated compilation script at ```misc/compiler.sh```(https://raw.githubusercontent.com/comododragon/lina/master/misc/compiler.sh);
 3. Create a folder where you wish to compile everything (for example purposes, we will refer this path as ```/path/to/lina```) and place the compiler script inside;
 4. Give execution permission to ```compiler.sh```:
@@ -87,9 +98,9 @@ To use automatic compilation:
 	```
 6. Follow the instructions on-screen;
 	* The script will download LLVM, CLANG, BOOST and Lina, prepare the folders and execute ```cmake```;
-	* It will ask before compiling if you want to apply some patches. Please read Section ***Troubleshooting*** for better understanding. In doubt, just press ENTER and the patches will be ignored. If compilation fails, you will have another chance to apply the patches;
-	* ***Every time the script is executed, the whole operation is re-executed (i.e. no incremental compilation with the script!);***
-	* Right after ```cmake``` and before starting the whole compilation process, the script will give you the option to abort the script and leave the project as is. At this point you will have the project ready to be compiled, where you can insert your modifications or fix some system-related problems regarding dependencies. Then, simply follow Section ***Manual Compilation*** from step ***10***;
+	* It will ask before compiling if you want to apply some patches. Please read Section **Troubleshooting** for better understanding. In doubt, just press ENTER and the patches will be ignored. If compilation fails, you will have another chance to apply the patches;
+	* **Every time the script is executed, the whole operation is re-executed (i.e. no incremental compilation with the script!);**
+	* Right after ```cmake``` and before starting the whole compilation process, the script will give you the option to abort the script and leave the project as is. At this point you will have the project ready to be compiled, where you can insert your modifications or fix some system-related problems regarding dependencies. Then, simply follow Section **Manual Compilation** from step **10**;
 	* If everything goes right, you should have the ```lina``` binary at ```/path/to/lina/build/bin/lina```.
 
 ### Manual Compilation
@@ -119,6 +130,7 @@ The automatic compilation script simply executes the following steps:
 	$ git clone https://github.com/comododragon/lina.git
 	$ mv lina llvm/tools/lina
 	```
+	* **NOTE:** This command should be modified if one wants to access an older version of Lina (see **Versions** for more information);
 6. Add the line ```add_llvm_tool_subdirectory(lina)``` right before ```add_llvm_tool_subdirectory(opt)``` at file ```llvm/tools/CMakeLists.txt```. It should look something like:
 	```
 	...
@@ -178,15 +190,17 @@ Calling ```lina -h``` will show you the help, which is pretty self-explanatory. 
 	* ```ZCU104:``` Xilinx Zynq UltraScale+ ZCU104 kit;
 	* ```VC707:``` Xilinx Virtex-7 FPGA;
 * ```-v``` or ```--verbose```: show more details about the estimation process and the results;
+* ```-C``` or ```--future-cache```: use cache file to save trace cursors and speed up further executions of Lina (see **Enabling Design Space Exploration**);
 * ```-f FREQ``` or ```--frequency=FREQ```: specify the target clock, in MHz;
 * ```-u UNCTY``` or ```--uncertainty=UNCTY```: specify the clock uncertainty, in percentage;
 * ```-l LOOPS``` or ```--loops=LOOPS```: specify which top-level loops should be analysed, starting from 0;
 * ```--f-npla```: activate non-perfect loop analysis (disabled by default);
-* ```--f-notcs```: deactivate timing-constrained scheduling (enabled by default).
+* ```--f-notcs```: deactivate timing-constrained scheduling (enabled by default);
+* ```--f-argres```: make Lina count BRAM usage of kernel arguments, which is by default disabled (see **Configuration File** for information on how arrays are described for Lina).
 
 ### Use by Example
 
-Let's estimate the cycle count for a simple matrix vector and product:
+Let's estimate the cycle count and resources for a simple matrix vector and product:
 ```
 #define SIZE 32
 
@@ -217,7 +231,7 @@ int main(void) {
 	$ export PATH=/path/to/lina/build/bin:$PATH
 	```
 2. Create a folder for your Lina project, create a file ```test.cpp``` and insert the contents of the code above;
-3. No we have to create a configuration file for this project, which will inform Lina the size of each array and also optimisation directives. Let's create a file ```config.cfg``` and enable partial loop unrolling with factor 4 on both loops (please see Section ***Configuration File*** for more information about this file):
+3. Now we create a configuration file for this project, which will inform Lina the size of each array and also optimisation directives. Let's create a file ```config.cfg``` and enable partial loop unrolling with factor 4 on both loops (please see Section ***Configuration File*** for more information about this file):
 	```
 	array,A,4096,4
 	array,x,128,4
@@ -232,7 +246,7 @@ int main(void) {
 	```
 5. Then, we can run Lina. You must pass the ```test_opt.bc``` file and the kernel name ```mvp``` as the two last positional arguments of Lina:
 	```
-	lina --config-file=config.cfg --target=ZCU102 --loops=0 test_opt.bc mvp
+	lina --config-file=config.cfg --target=ZCU104 --loops=0 test_opt.bc mvp
 	```
 6. Lina should give you a report of the cycle counts, similar to:
 	```
@@ -248,7 +262,7 @@ int main(void) {
 	========================================================
 	Building mangled-demangled function name map
 	========================================================
-	Counting number of top-level loops in "_Z3mvpPfS_S_"
+	Counting number of top-level loops in "mvp"
 	========================================================
 	Assigning IDs to BBs, acquiring array names
 	========================================================
@@ -267,6 +281,69 @@ int main(void) {
 	********************************************************
 	[][][_Z3mvpPfS_S__loop-0_2] Estimated cycles: 5672
 	```
+7. A more detailed report (including resources) can be found in the log file ```mvp_summary.log```:
+	```
+	================================================
+	Lina summary
+	================================================
+	Function name: mvp
+	================================================
+	Target clock: 100.000000 MHz
+	Clock uncertainty: 27.000000 %
+	Target clock period: 10.000000 ns
+	Effective clock period: 7.300000 ns
+	Achieved clock period: 7.010000 ns
+	Loop name: _Z3mvpPfS_S__loop-0
+	Loop level: 2
+	DDDG type: full loop body
+	Loop unrolling factor: 4
+	Loop pipelining enabled? no
+	Total cycles: 5672
+	------------------------------------------------
+	Number of repeated stores detected: 3
+	------------------------------------------------
+	Ideal iteration latency (ASAP): 21
+	Constrained iteration latency: 22
+	Initiation interval (if applicable): 2
+	resII (mem): 2
+	resII (op): 1
+	recII: 1
+	Limited by memory, array name: A
+	------------------------------------------------
+	Units limited by DSP usage: none
+	------------------------------------------------
+	DSPs: 5
+	FFs: 2215
+	LUTs: 1486
+	BRAM18k: 0
+	fAdd units: 1
+	fSub units: 0
+	fMul units: 1
+	fDiv units: 0
+	add units: 0
+	sub units: 0
+	mul units: 0
+	udiv units: 0
+	sdiv units: 0
+	shl units: 0
+	lshr units: 0
+	ashr units: 0
+	and units: 0
+	or units: 0
+	xor units: 0
+	Number of partitions for array "A": 1
+	Number of partitions for array "x": 1
+	Number of partitions for array "y": 1
+	Memory efficiency for array "A": 0.000000
+	Memory efficiency for array "x": 0.000000
+	Memory efficiency for array "y": 0.000000
+	Used BRAM18k for array "A": 0
+	Used BRAM18k for array "x": 0
+	Used BRAM18k for array "y": 0
+	================================================
+	```
+	* **NOTE:** No BRAM usage was reported, since arguments are by default not resource-counted (so as Vivado HLS does). To enable resource count for arguments, please either set your array to be ```rwvar``` or ```rovar``` in the ```config.cfg``` file **OR** use ```--f-argres```;
+	* **NOTE2:** Lina will output resource estimates to console when running with ```-v```. Please disregard these values and prefer to use the values shown in the summmary file as above.
 
 We can compare the results against the reports from Vivado. In this case, we used Vivado HLS 2018.2 for the ZCU102 Xilinx UltraScale+ Board.
 
@@ -305,7 +382,7 @@ We can compare the results against the reports from Vivado. In this case, we use
 	set_top mvp
 	add_files test.cpp
 	open_solution "solution1"
-	set_part {xczu9eg-ffvb1156-2-e}
+	set_part {xczu7ev-ffvc1156-2-e}
 	create_clock -period 10 -name default
 	set_clock_uncertainty 27.0%
 	csynth_design
@@ -324,6 +401,27 @@ We can compare the results against the reports from Vivado. In this case, we use
 	|- Loop 1     |  5672|  5672|       709|          -|          -|     8|    no    |
 	+-------------+------+------+----------+-----------+-----------+------+----------+
 	```
+5. A resource count estimate is available in the same file:
+	```
+	+-----------------+---------+-------+--------+--------+-----+
+	|       Name      | BRAM_18K| DSP48E|   FF   |   LUT  | URAM|
+	+-----------------+---------+-------+--------+--------+-----+
+	|DSP              |        -|      -|       -|       -|    -|
+	|Expression       |        -|      -|       0|     239|    -|
+	|FIFO             |        -|      -|       -|       -|    -|
+	|Instance         |        -|      5|     355|     349|    -|
+	|Memory           |        -|      -|       -|       -|    -|
+	|Multiplexer      |        -|      -|       -|     654|    -|
+	|Register         |        -|      -|     368|       -|    -|
+	+-----------------+---------+-------+--------+--------+-----+
+	|Total            |        0|      5|     723|    1242|    0|
+	+-----------------+---------+-------+--------+--------+-----+
+	|Available        |      624|   1728|  460800|  230400|   96|
+	+-----------------+---------+-------+--------+--------+-----+
+	|Utilization (%)  |        0|   ~0  |   ~0   |   ~0   |    0|
+	+-----------------+---------+-------+--------+--------+-----+
+	```
+	* ***NOTE:*** These are Vivado HLS pre-synthesis estimates for resource. For a final resource count, the kernel must be fully synthesised.
 
 ### Configuration File
 
@@ -331,7 +429,7 @@ Lina uses a configuration file to inform array information and optimisation dire
 
 ```
 # Any line starting with a "#" is ignored by the parser
-array,A,4096,4
+array,A,4096,4,arg
 unrolling,mvp,0,1,4,4
 pipeline,mvp,0,2
 partition,block,A,4096,4,8
@@ -341,10 +439,15 @@ Now line by line:
 
 * ```# Any line starting with a "#" is ignored by the parser```
 	* Pretty self-explanatory;
-* ```array,A,4096,4```
-	* Declare an array. The arguments are the array name, total size in bytes and word size in bytes, respectively;
+* ```array,A,4096,4,arg```
+	* Declare an array. The arguments are the array name, total size in bytes, word size in bytes and an optional scope indicator;
 	* Equivalent to ```uint32_t A[1024];```
 	* All arrays of the kernel must be declared here;
+	* The last argument indicates whether and how Lina should count the resources for the array:
+		* ```arg:``` array is considered an argument (DEFAULT if omitted). No resource count is performed for this array unless Lina is executed with ```--f-argres```;
+		* ```rovar:``` array is considered a read-only memory block and Lina will consider its resource count;
+		* ```rwvar:``` array is considered a read-write memory block and Lina will consider its resource count;
+		* ```nocount:``` force this array to be never counted, regardless of ```--f-argres``` being present or not;
 * ```unrolling,mvp,0,1,4,4```
 	* Set unroll. The arguments are the kernel name, the top-level loop ID (starts from 0), the loop depth (1 is the top-level), the loop header line number and the unroll factor;
 	* Equivalent to ```#pragma HLS unroll factor=4```
@@ -369,99 +472,251 @@ The idea of Lina is to provide fast estimations for design space exploration. Li
 3. Create a ```config.cfg``` with the optimisation configurations that you wish to test:
 4. Perform estimation:
 	```
-	$ lina --mode=estimation --config-file=config.cfg --target=ZCU102 --loops=0 test_opt.bc mvp
+	$ lina --mode=estimation --config-file=config.cfg --target=ZCU104 --loops=0 test_opt.bc mvp
 	```
 5. Repeat from step ***3***.
 
-## Perform a Small Exploration
+#### Trace Cache
 
-At folder ```misc/smalldse``` from this repository, you can find files to perform a small exploration similar as in the paper.
+At every run of Lina, a traversal is performed on the dynamic trace file to generate the DDDGs. This traversal can slow the exploration down significantly if for many design points a significant amount of instructions are traversed prior to DDDG generation. Lina implements a trace cursor cache that saves information about the trace cursor for future executions of Lina for the same exploration. To activate the cache, simply use ```-C```:
+	```
+	$ lina --mode=estimation --config-file=config.cfg --target=ZCU104 --loops=0 -C test_opt.bc mvp
+	```
 
-To run this exploration, you must perform some setup first:
+When cache is active, Lina will search for a file named ```<WORKDIR>/futurecache.db```, where ```<WORKDIR>``` is the working directory as defined by the ```-i``` argument (DEFAULT to ```.```). If this file is found, Lina will use it as a trace cursor cache, and save further cache hits after execution. If the file is not found, Lina generates a new empty one. This cache can significantly improve the performance of Lina by reducing the amount of redundant computations.
+
+**Please note that prior to execution of a new exploration involving different kernels or different parameters, the file should be deleted first.**
+
+***This access is not thread-safe! For parallel executions of Lina, please use separate cache files (i.e. by soft-links).***
+
+## Perform an Exploration
+
+***NOTE: This section describes how to perform an exploration using a newer DSE infrastructure. To use the small DSE tools from the FPT-2019 paper, please see **Perform a Small Exploration** section from the older README.md (https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md).***
+
+We made available in folder ```misc/largedse``` the DSE infrastructure that we used to validate Lina. The PolyBench/C kernels used are available in the folder ```misc/largedse/hls``` and ```misc/largedse/fullsyn```. The ```hls``` experiment holds kernels that are created to be compared against Vivado HLS results, whereas the ```fullsyn``` kernels are tailored to be compared against SDSoC results.
+
+Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an example:
+
 1. Compile Lina following the instructions from Sections ***Setup*** and ***Compilation***;
 	* We will refer to the path for this version as ```/path/to/new/lina/build/bin```;
-2. Also compile an adapted version from Lina for comparison purposes in a different folder:
-	* This version is a refactored version of Lin-Analyzer, before TCS and NPLA were implemented. It should work the same way as Lin-Analyzer however with some minor performance improvements;
-	* ***Manual compile:***
-		* Follow the same instructions as in ***Setup*** and ***Compilation*** but clone this branch instead:
-		```
-		$ git clone -b 2_updlat https://github.com/comododragon/lina.git
-		```
-		* Please note that this branch points to a preliminar version of Lina where it still used the original Lin-Analyzer branding. Compilation files are configured for this name, thus you must change from ```lina``` to ```lin-analyzer``` in steps 5 (```mv lina llvmtools/lin-analyzer```) and 6 (```add_llvm_tool_subdirectory(lin-analyzer)```) from Section ***Manual Compilation***;
-	* ***Automatic compile:*** please use the compiling script located at ```misc/compile.2_updlat.sh```;
-	* We will refer to the path for this version as ```/path/to/old/lina/build/bin```;
-3. You will also need Python 3. Please install it using your OS repository. For example in Ubuntu:
+2. You will also need Python 3. Please install it using your OS repository. For example in Ubuntu:
 	```
 	$ sudo apt-get install python3
 	```
-4. Generate the traces;
-	* The folder ```misc/smalldse/baseFiles/traces``` must contain 9 folders, one for each kernel (```atax```, ```bicg``` and so on) and inside each folder should be the dynamic trace for each kernel (a file named ```dynamic_trace.gz```);
-	* You can manually generate the traces by running ```lina```  or ```lin-analyzer``` in mode ```trace```, OR;
-	* You can download the traces already generated from [here](https://drive.google.com/file/d/1FGNUzlMfG1_pRp1Fb5CeYX5C3vyCbGfl/view?usp=sharing) (almost 1GB!) and put all the folders inside ```misc/smalldse/baseFiles/traces```;
-5. Set the correct path for the lina and lin-analyzer binaries at file ```misc/smalldse/vai.py``` according to your installation:
+3. Generate the exploration workspace. This will create the folder ```workspace/hls/bicg``` where all design points are generated as separate Lina projects:
 	```
-	paths = {
-		"2_updlat": "/path/to/old/lina/build/bin",
-		"7_npla": "/path/to/new/lina/build/bin"
-	}
+	$ ./run.py PATH=/path/to/new/lina/build/bin generate hls bicg
+	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	===========================================================================
+	Generating design points for bicg                                                                                                      
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Done generating for bicg!                                                                                                              
+	===========================================================================
 	```
-6. Explore all design points using lin-analyzer/lina:
+	* The LLVM bitcode files are compiled and stored at ```workspace/hls/bicg/base```;
+	* The compilation stdout/stderr can be found at ```workspace/hls/bicg/base/make.out```;
+4. Generate the trace file for this kernel:
 	```
-	$ ./runall.sh
+	$ ./run.py PATH=/home/perina/Desktop/DD/Stage2/tools/lina/build/bin trace hls bicg   
+	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	===========================================================================
+	Generating trace for bicg                                                                                                              
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Done generating trace for bicg! Elapsed time: 1.1e+07us                                                                                
+	===========================================================================
 	```
-	* You can also run a single point by running ```vai.py```;
-7. To explore all design points using Vivado, first make sure that the Vivado binaries are reachable (e.g. ```source ~/xilinx/SDx/2018.2/settings64.sh```) and run:
+	* The trace file ```dynamic_trace.gz``` is generated and stored at ```workspace/hls/bicg/base```. Each design point has a soft-link to this trace;
+	* The trace generation time can be found at ```workspace/hls/bicg/base/trace.time```;
+	* The trace generation stdout/stderr can be found at ```workspace/hls/bicg/base/lina.trace.out```;
+5. Now run the exploration. In this case we will use the trace cache and 4 parallel threads:
 	```
-	$ ./runallvivado.sh
+	$ ./run.py PATH=/home/perina/Desktop/DD/Stage2/tools/lina/build/bin JOBS=4 explore hls bicg
+	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	INFO: Option JOBS set to 4
+	===========================================================================
+	Exploring bicg (job 1)                                                                                                                 
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Elapsed time for this job: 4.6e+07us; Total: 4.67e+07us                                                                                
+	===========================================================================
+	Exploring bicg (job 2)                                                                                                                 
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Done exploring bicg! Elapsed time for this job: 4.6e+07us                                                                              
+	===========================================================================
+	Exploring bicg (job 3)                                                                                                                 
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Done exploring bicg! Elapsed time for this job: 4.6e+07us                                                                              
+	===========================================================================
+	Exploring bicg (job 4)                                                                                                                 
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Done exploring bicg! Elapsed time for this job: 4.59e+07us                                                                             
+	===========================================================================
 	```
-	* You can also run a single point by running ```vivai.py```;
-8. After executing both explorations, you can see the precision results at ```misc/smalldse/processedResults/full.ods```.
+	* Script ```run.py``` generates a trace cache file for each thread and dynamically creates the soft-links for each design point to one of the files. These files are stored as ```workspace/hls/bicg/base/futurecache.X.db```, where ```X``` is a thread ID;
+	* The exploration time can be found at ```workspace/hls/bicg/base/explore.time```;
+	* The exploration stdout/stderr can be found at ```workspace/hls/bicg/base/lina.explore.X.out```, where ```X``` is a thread ID;
+6. Finally generate a csv file containing the results:
+	```
+	$ ./run.py PATH=/home/perina/Desktop/DD/Stage2/tools/lina/build/bin collect hls bicg 
+	INFO: Option PATH set to /home/perina/Desktop/DD/Stage2/tools/lina/build/bin
+	===========================================================================
+	Collecting bicg                                                                                                                        
+	100% ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+	Done collecting bicg! Data saved to csvs/hls/bicg.csv                                                                                  
+	===========================================================================
+	```
+	* The generated csv file is saved to ```csvs/hls/bicg.csv```. You can then use this file as an input to a Pareto set generator or use your favourite multi-objective optimiser;
 
-The clock uncertainty, array partitioning, loop pipelining and unrolling directives are passed to the design point explorers as arguments for the ```vai.py``` and ```vivai.py``` python scripts. Please run the scripts without any arguments for more information.
+### The run.py Script
 
-If you want to try other values for the directives, changes are needed in the design point explorer scripts. For example if you want to try other partition factors:
-* For ```vai.py```:
-	* The partition factors are defined at the ```configScheme``` variable. For example for kernel ```atax```, it will be at ```configScheme["atax"]["partitioning"]["1"]```:
+Run ```run.py``` with no arguments in order to understand its usage:
+```
+Usage: run [OPTION=VALUE]... COMMAND EXPERIMENT [KERNELS]...
+    [OPTION=VALUE]... change options (e.g. UNCERTAINTY=27.0):
+                          SILENT      all subprocesses spawned will output
+                                      to /dev/null instead of the *.out files
+                                      (use SILENT=yes to enable)
+                                      DEFAULT: no
+                          PATH        the path to Lina and its LLVM bins
+                                      (will use $PATH when omitted)
+                                      DEFAULT: empty
+                          JOBS        set the number of threads to spawn
+                                      lina
+                                      DEFAULT: 1
+                          CACHE       toggle cache use (use CACHE=no to disable)
+                                      DEFAULT: yes
+                          UNCERTAINTY (in %, only applicable to "explore")
+                                      DEFAULT: 27.0
+                          LOOPID      the loop nest number to be analysed by
+                                      Lina
+                                      DEFAULT: 0
+    COMMAND           may be
+                          generate
+                          trace
+                          explore
+                          collect
+    EXPERIMENT        the experiment to run (e.g. "hls" or "fullsyn")
+    [KERNELS]...      the kernels to run the command on
+                      (will consider all in the experiment when omitted)
+```
+
+The options can be used to change the DSE exploration (e.g. number of threads to run Lina, clock uncertainty, etc.). An experiment is defined as a set of kernels that Lina should explore at once. Each experiment is composed of a folder located in the same folder as ```run.py```, and it is named after the folder name (e.g. the ```hls``` and ```fullsyn``` folders). If no kernel name is explicitly passed to ```run.py```, it will perform the command on all kernels within that experiment.
+
+### Setting Up a New Exploration
+
+In order to explore a kernel not included in the repository, do as follows (please use the existing experiments ```hls``` and ```fullsyn``` as a reference):
+
+1. Set up a new experiment. We will name it ```test```:
 	```
-	configScheme = {
-		# ...
-		"atax": {
-			"arrays": [
-				# ...
-			],
-			"partitioning": {
-				"0": [],
-				"1": [
-					("cyclic", 4), # <-- Change this value
-					("complete", 0),
-					("complete", 0)
-				]
-			},
-			"pipelining": {
-				# ...
-			},
-			"unrolling": {
-				# ...
+	mkdir test
+	```
+	* **NOTE:** Ensure that the ```run.py``` is in the same folder as this experiment.
+2. Set up a new kernel. We will use the ```mvp``` kernel tested above:
+	```
+	mkdir test/mvp
+	```
+3. Prepare the kernel. Five files are required (unused files should be created and left empty):
+	* ```test/mvp/mvp.cpp```: source code containing the kernel to be tested:
+		```
+		#include "mvp.h"
+
+		void mvp(float A[SIZE * SIZE], float x[SIZE], float y[SIZE]) {
+			for(int i = 0; i < SIZE; i++)
+				for(int j = 0; j < SIZE; j++)
+					x[i] += A[i * SIZE + j] * y[j];
+		}
+		```
+	* ```test/mvp/mvp.h```: kernel header file, with constants and so:
+		```
+		#ifndef MVP_H
+		#define MVP_H
+
+		#define SIZE 32
+
+		void mvp(float A[SIZE * SIZE], float x[SIZE], float y[SIZE]);
+
+		#endif
+		```
+	* ```test/mvp/mvp_tb.cpp```: testbench to execute the kernel:
+		```
+		#include "mvp.h"
+
+		int main(void) {
+			float A[SIZE * SIZE], x[SIZE], y[SIZE];
+
+			for(int j = 0; j < SIZE; j++) {
+				y[j] = j;
+
+				for(int i = 0; i < SIZE; i++)
+					A[i * SIZE + j] = i + j;
 			}
-		},
-		# ...
-	}
-	```
-	* You must change the values that are grouped with the "cyclic" and "block" elements from ```configScheme```;
-* For ```vivai.py```:
-	* The partition factors are defined at the ```arrayConfigs``` variable. For example for kernel ```atax```, it will be at ```arrayConfigs["atax"]```:
-	```
-	arrayConfigs = {
-		# ...
-		"atax": [
-			("A", "cyclic", 4), # <-- Change this value
-			("x", "complete", 0),
-			("tmp", "complete", 0)
-		],
-		# ...
-	}
-	```
-	* You must change the values that are grouped with the "cyclic" and "block" elements from ```arrayConfigs```;
+
+			mvp(A, x, y);
+
+			return 0;
+		}
+		```
+	* ```test/mvp/mvp_tb.h```: testbench header file. We will leave empty in this case;
+	* ```test/mvp/mvp.json```: a JSON description file that describes the exploration knobs that the DSE should use, platform and array information. For more information please see **JSON Description File** below. An example of such file:
+		```
+		{
+			"platform": "zcu104",
+			"periods": [10, 20],
+			"loops": [
+				{
+					"line": 6,
+					"bound": 32,
+					"unrolling": [],
+					"pipelining": false,
+					"nest": {
+						"line": 9,
+						"bound": 32,
+						"unrolling": [2],
+						"pipelining": true,
+						"nest": {}
+					}
+				}
+			],
+			"arrays": {
+				"A": {"words": 1024, "size": 4, "block": [2], "cyclic": [2], "complete": false},
+				"x": {"words": 32, "size": 4, "block": [], "cyclic": [], "complete": true},
+				"y": {"words": 32, "size": 4, "block": [], "cyclic": [], "complete": true}
+			},
+			"inarrays": {}
+		}
+		```
+4. Then finally follow the instructions as in **Performing an Exploration** to generate the results for ```mvp```.
+
+### JSON Description File
+
+The ```run.py``` script uses a JSON description file to define several exploration parameters for one kernel. It defines the platform to be used, description of loops, arrays and which knobs should be explored. See the previous section (step 3) for an example of such file.
+
+The required information are:
+
+* ```"platform"```: the target FPGA platform. Examples: "zcu102", "zcu104";
+* ```"periods"```: an array containing which periods to explore in nanosseconds (can be replaced by ```"frequencies"```, see below);
+* ```"frequencies"```: an array containing which frequencies to explore in MHz (can be replaced by ```"periods"```, see above);
+* ```"loops"```: an array containing description of the loop nests in the kernel (currently only one loop nest supported!). Each loop nest is composed of a recursive dictionary with the following elements:
+	* ```"line"```: the line number of the header;
+	* ```"bound"```: the loop trip count;
+	* ```"unrolling"```: a list of all unroll factors to explore;
+		* For none, simply use ```[]```;
+		* The factor 1 (no unroll) is added automatically;
+		* For complete unroll, use the value of ```"bound"```;
+	* ```"pipelining"```: set to ```true``` in order to allow this loop level to be pipelined, or ```false``` otherwise;
+	* ```"nest"```: is this loop level contains a sub-loop nest, insert it here. The sub-loop elements are the same as this loop (i.e. recursive);
+		* If there are no sub-loops, simply use ```{}```;
+* ```"arrays"```: a dictionary of all arrays present in the kernel code that should be partitioned. The key of each element is the name of the array. Each value must have the following elements:
+	* ```"words"```: number of words in the array;
+	* ```"size"```: size (in bytes) of each word (for now only 4 is completely supported);
+	* ```"block"```: a list of all partitioning factors to be used with the block partitioning type;
+		* For none, simply use ```[]```;
+	* ```"cyclic"```: a list of all partitioning factors to be used with the cyclic partitioning type;
+		* For none, simply use ```[]```;
+	* ```"complete"```: set to ```true``` in order to allow this array to be completely partitioned, or ```false``` otherwise;
+	* ```"forcescope"```: ```run.py``` executes Lina with the ```--f-argres``` flag active. You can force different scopes for this array by setting ```"arg"```, ```"rovar"```, ```"rwvar"``` or ```"nocount"``` to ```"forcescope"```;
+		* This argument is optional;
+* ```"inarrays"```: a dictionary of all arrays present in the kernel that should not be part of the partitioning exploration (e.g. internal arrays). They are defined similar to ```"arrays"```, however without ```"block"```, ```"cyclic"```, ```"complete"``` and ```"forcescope"``` elements. Specific elements to this type are:
+	* ```"readonly"```: by default this array is set with scope ```"rwvar"```. Set ```"readonly"``` to true to force the scope to ```"rovar"```.
 
 ## Supported Platforms
 
@@ -481,9 +736,9 @@ Several points of the code must be adjusted if you want to insert a new platform
 * Total resource count for the platform;
 	* Check the enums with ```MAX_DSP```, ```MAX_FF``` and so on at ```include/profile_h/HardwareProfile.h```;
 * Timing-constrained latencies;
-	* Check the variable ```timeConstrainedLatencies``` at ```include/profile_h/HardwareProfile.h```;
+	* Check the variable ```timeConstrainedLatencies``` at ```lib/Build_DDDG/HardwareProfileParams.cpp```;
 * Timing-constrained resources;
-	* Check the variables ```timeConstrainedDSPs```, ```timeConstrainedFFs``` and ```timeConstrainedLUTs``` at ```include/profile_h/HardwareProfile.h```.
+	* Check the variables ```timeConstrainedDSPs```, ```timeConstrainedFFs``` and ```timeConstrainedLUTs``` at ```lib/Build_DDDG/HardwareProfileParams.cpp```.
 
 ## Files Description
 
@@ -493,6 +748,7 @@ Several points of the code must be adjusted if you want to insert a new platform
 	* ***AssignLoadStoreIDPass.h:*** pass to assign ID to load/stores;
 	* ***auxiliary.h:*** auxiliary functions and variables;
 	* ***BaseDatapath.h:*** base class for DDDG estimation;
+	* ***boostincls.h:*** the BOOST includes used by Lina;
 	* ***colors.h:*** colour definitions used to generate the DDDGs as DOT files;
 	* ***DDDGBuilder.h:*** DDDG builder;
 	* ***DynamicDatapath.h:*** extended class from BaseDatapath, simply coordinates some BaseDatapath calls;
@@ -514,7 +770,8 @@ Several points of the code must be adjusted if you want to insert a new platform
 		* ***BaseDatapath.cpp:*** base class for DDDG estimation;
 		* ***DDDGBuilder.cpp:*** DDDG builder;
 		* ***DynamicDatapath.cpp:*** extended class from BaseDatapath, simply coordinates some BaseDatapath calls;
-		* ***HardwareProfile.cpp:*** hardware profile library, characterising resources and latencies;
+		* ***HardwareProfile.cpp:*** hardware profile logic;
+		* ***HardwareProfileParams.cpp:*** hardware profile library with all latencies and resources;
 		* ***Multipath.cpp:*** class to handle a set of datapaths (non-perfect loop analysis);
 		* ***opcodes.cpp:*** LLVM opcodes;
 		* ***SlotTracker.cpp:*** slot tracker used by InstrumentForDDDGPass;
@@ -527,7 +784,13 @@ Several points of the code must be adjusted if you want to insert a new platform
 		* ***InstrumentForDDDGPass.cpp:*** pass to instrument and execute the input code;
 		* ***lin-profile.cpp:*** main function;
 * ***misc***;
-	* ***smalldse:*** small exploration with 9 PolyBench-based kernels;
+	* ***largedse:*** updated DSE tool;
+		* ***csvs:*** folder where the results for each experiment/kernel are saved as CSV;
+		* ***fullsyn:*** the ```fullsyn``` experiment;
+		* ***hls:*** the ```hls``` experiment;
+		* ***run.py:*** the DSE tool;
+		* ***workspace:*** exploration workspace for the experiments/kernels;
+	* ***smalldse:*** small exploration with 9 PolyBench-based kernels (FPT-2018 PAPER);
 		* ***baseFiles:*** common files that are shared among design points;
 			* ***makefiles:*** Makefiles used by Lina or Vivado;
 			* ***parsers:*** parser scripts used by the main python script;
@@ -591,11 +854,6 @@ make
 ```
 
 Then, the following compilations will work normally with ```-j2```, ```-j3```, etc. There should be no problems if you only manipulate the source files inside Lina.
-
-## TODOs
-
-* Improve the inner loop body scheduling system to better reflect certain optimisations from Vivado that are not covered by Lina, mainly when pipelining is enabled;
-* Add support to global memories (e.g. DDR);
 
 ## Acknowledgements
 
