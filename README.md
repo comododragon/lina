@@ -28,7 +28,7 @@ For more information regarding Lina, please refer to our paper (see Section **Pu
 	3. [Enabling Design Space Exploration](#enabling-design-space-exploration)
 		1. [Trace Cache](#trace-cache)
 6. [Perform an Exploration](#perform-an-exploration)
-	1. [The run.py Script](#the-run.py-script)
+	1. [The Script](#the-script)
 	2. [Setting Up a New Exploration](#setting-up-a-new-exploration)
 	3. [JSON Description File](#json-description-file)
 7. [Supported Platforms](#supported-platforms)
@@ -37,7 +37,7 @@ For more information regarding Lina, please refer to our paper (see Section **Pu
 9. [Troubleshooting](#troubleshooting)
 	1. ["is private within this context"](#is-private-within-this-context)
 	2. [Problems with Parallel Compilation](#problems-with-parallel-compilation)
-10. [Acknowledgements](#acknowledgments)
+10. [Acknowledgments](#acknowledgments)
 
 ## Versions
 
@@ -597,7 +597,7 @@ Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an exampl
 	```
 	* The generated csv file is saved to ```csvs/hls/bicg.csv```. You can then use this file as an input to a Pareto set generator or use your favourite multi-objective optimiser;
 
-### The run.py Script
+### The Script
 
 Run ```run.py``` with no arguments in order to understand its usage:
 ```
@@ -886,7 +886,7 @@ make
 
 Then, the following compilations will work normally with ```-j2```, ```-j3```, etc. There should be no problems if you only manipulate the source files inside Lina.
 
-## Acknowledgements
+## Acknowledgments
 
 The project author would like to thank São Paulo Research Foundation (FAPESP), who funds the research where this project is inserted (Grant 2016/18937-7).
 
