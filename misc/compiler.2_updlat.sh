@@ -63,9 +63,15 @@ rm boost_1_57_0.tar.gz
 echo -e "\u001b[1m\u001b[92m--> Preparing build folder...\u001b[0m"
 mkdir build
 
+ZLIBPATH=/usr/lib/libz.so
+if [ ! -e $ZLIBPATH ]; then
+	echo -ne "\u001b[1m\u001b[92m--> ZLIB not found at /usr/lib/libz.so. Please set an alternate path: \u001b[0m"
+	read ZLIBPATH
+fi
+
 echo -e "\u001b[1m\u001b[92m--> Running CMAKE...\u001b[0m"
 cd build
-cmake ../llvm -DBOOST_INCLUDE_DIR=../boost -DZLIB_INCLUDE_DIRS=/usr/include -DZLIB_LIBRARY=/usr/lib/libz.so -DLLVM_ENABLE_RTTI:BOOL=ON
+cmake ../llvm -DBOOST_INCLUDE_DIR=../boost -DZLIB_INCLUDE_DIRS=/usr/include -DZLIB_LIBRARY=$ZLIBPATH -DLLVM_ENABLE_RTTI:BOOL=ON
 cd ..
 
 echo -e "\u001b[1m\u001b[92m--> Applying patches...\u001b[0m"

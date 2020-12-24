@@ -90,18 +90,19 @@ Before proceeding to compilation, you must ensure that the following packages ar
 	```
 *You can also compile LLVM using other toolchains, such as ```clang```. Please see https://releases.llvm.org/3.5.0/docs/GettingStarted.html*
 
-At last, the relation between ```cmake``` and ```zlib``` is quite tricky, mainly in Ubuntu. We are assuming here that installing the ```zlib``` package will put the shared library ```zlib.so``` at ```/usr/lib```. Ubuntu puts ```zlib``` on a different location and this breaks compilation. **Please make sure that you have a valid library (or a link to) at the /usr/lib/libz.so location.** You can do that by listing the file:
+**We assume here that ZLIB is located at /usr/lib.libz.so.** Note that certain distributions (e.g. Ubuntu) might place it in a different path. You can check that by listing the file:
 ```
 $ ls /usr/lib/libz.so
 ```
 
-If it shows ```no such file or directory``` or it lists a broken link, please (re-)create the soft link pointing to the correct library. In Ubuntu 18.04 for example, it is located at ```/lib/x86_64-linux-gnu/libz.so.1```. In this case the soft-link should be created as:
-```
-$ cd /usr/lib
-$ ln -s /lib/x86_64-linux-gnu/libz.so.1 libz.so
-```
-
-Alternatively, you can change the compiler script (or the ```cmake``` command if compiling manually) to point to the correct ```zlib``` position. You can do that by modifying the value passed to the ```-DZLIB_LIBRARY=``` flag of the ```cmake``` command. In this case you don't need to perform any soft-linking.
+If ```no such file or directory``` appears, there are a couple of options:
+* If manually compiling Lina, modify the value passed to the ```-DZLIB_LIBRARY=``` flag of the ```cmake``` command;
+* If using the compiler script, a notification will pop up if ZLIB is not found and you will have the chance to set a custom path;
+* You can (re-)create the soft link pointing to the correct library (**this is not a recommended approach**). In Ubuntu 18.04 for example, it is located at ```/lib/x86_64-linux-gnu/libz.so.1```. In this case the soft-link should be created as:
+	```
+	$ cd /usr/lib
+	$ ln -s /lib/x86_64-linux-gnu/libz.so.1 libz.so
+	```
 
 ## Compilation
 
