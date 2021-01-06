@@ -38,7 +38,7 @@ For more information regarding Lina, please refer to our paper (see Section **Pu
 	1. ["is private within this context"](#is-private-within-this-context)
 	2. [Problems with Parallel Compilation](#problems-with-parallel-compilation)
 	3. [subprocess.CalledProcessError: Command ... returned non-zero exit status 2](#subprocesscalledprocesserror-command--returned-non-zero-exit-status-2)
-	4. [Lina's bundled clang fails to find basic headers (e.g. "fatal error: 'cstdlib' file not found")](#linas-bundled-clang-fails-to-find-basic-headers-eg-fatal-error-cstdli-file-not-found)
+	4. [Lina's bundled clang fails to find basic headers (e.g. "fatal error: 'cstdlib' file not found")](#linas-bundled-clang-fails-to-find-basic-headers-eg-fatal-error-cstdlib-file-not-found)
 10. [Acknowledgments](#acknowledgments)
 
 ## Versions
