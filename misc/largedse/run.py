@@ -437,7 +437,7 @@ def generate(console, options, experiment, kernels):
 		with open(os.path.join("workspace", experiment, k, "base", "make.out"), "w") as outF:
 			subprocess.run(
 				["make", "linked_opt.bc"],
-				cwd=os.path.join("workspace", experiment, k, "base"), env=modEnv,
+				cwd=os.path.join("workspace", experiment, k, "base"), env=modEnv, check=True,
 				stderr=subprocess.DEVNULL if "yes" == options["SILENT"][1] else subprocess.STDOUT,
 				stdout=subprocess.DEVNULL if "yes" == options["SILENT"][1] else outF
 			)
@@ -473,7 +473,7 @@ def trace(console, options, experiment, kernels):
 			before = time.time_ns()
 			subprocess.run(
 				linaBaseCmd + ["-l", "{}".format(options["LOOPID"][1]), "--mode", "trace", "linked_opt.bc", k],
-				cwd=os.path.join("workspace", experiment, k, "base"), env=modEnv,
+				cwd=os.path.join("workspace", experiment, k, "base"), env=modEnv, check=True,
 				stderr=subprocess.DEVNULL if "yes" == options["SILENT"][1] else subprocess.STDOUT,
 				stdout=subprocess.DEVNULL if "yes" == options["SILENT"][1] else outF
 			)
@@ -579,7 +579,7 @@ def explore(console, options, experiment, kernels):
 										"--f-argres", "--f-npla", "--mode", "estimation", "linked_opt.bc", k
 									],
 									#["ls", "."],
-									cwd=os.path.join("workspace", experiment, k, code), env=modEnv,
+									cwd=os.path.join("workspace", experiment, k, code), env=modEnv, check=True,
 									stderr=subprocess.DEVNULL if "yes" == options["SILENT"][1] else subprocess.STDOUT,
 									#stdout=subprocess.DEVNULL if "yes" == options["SILENT"][1] else outFs[j]
 									stdout=outFs[j]
@@ -592,7 +592,7 @@ def explore(console, options, experiment, kernels):
 										"--f-argres", "--f-npla", "--mode", "estimation", "linked_opt.bc", k
 									],
 									#["ls", "."],
-									cwd=os.path.join("workspace", experiment, k, code), env=modEnv,
+									cwd=os.path.join("workspace", experiment, k, code), env=modEnv, check=True,
 									stderr=subprocess.DEVNULL if "yes" == options["SILENT"][1] else subprocess.STDOUT,
 									#stdout=subprocess.DEVNULL if "yes" == options["SILENT"][1] else outFs[j]
 									stdout=outFs[j]
