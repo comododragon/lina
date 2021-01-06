@@ -841,7 +841,7 @@ Several points of the code must be adjusted if you want to insert a new platform
 
 ## Troubleshooting
 
-Some problems may arise during compilation, since LLVM 3.5.0 was designed to be compiled by older versions of GCC or C/C++ standards.
+Some problems may arise during compilation or runtime, since LLVM 3.5.0 was designed to be compiled by older versions of GCC or C/C++ standards.
 
 ### "is private within this context"
 
@@ -886,6 +886,49 @@ make
 ```
 
 Then, the following compilations will work normally with ```-j2```, ```-j3```, etc. There should be no problems if you only manipulate the source files inside Lina.
+
+### subprocess.CalledProcessError: Command '['make', 'linked_opt.bc']' returned non-zero exit status 2
+
+The run.py script may throw exceptions if the spawned subprocesses fail. For specific information, one can check the output files that are located at ```workspace/<EXPERIMENT>/<KERNEL>/base```. *Note that these are only generated if run.py is not running in silent mode (i.e. not running with *```SILENT=yes```* argument.* The files are:
+
+* *make.out:* generated during compilation of the input kernel codes, through *generate* command;
+* *lina.trace.out:* output from Lina during trace;
+* *lina.explore.X.out:* output from Lina during exploration, where X is the job ID (1, 2, 3, ...).
+
+### Lina's bundled clang fails to find basic headers (e.g. "fatal error: 'cstdlib' file not found")
+
+Since Lina is build on an old version of LLVM, operating systems that are up to date may not provide libraries or headers in the outdated paths that LLVM 3.5.0 expect. To solve this issue, the user must point CLANG to the include folders that actually contain the content that CLANG is expecting. This is done using environment variables:
+
+* *C_INCLUDE_PATH:* to set additional header paths (C);
+* *CPLUS_INCLUDE_PATH:* to set additional header paths (C++);
+* *LD_LIBRARY_PATH:* to set additional linking libraries.
+
+For example in Ubuntu 20.04, the CLANG bundled with Lina is not able to find the standard libraries (e.g. cstdio, cstdlib). One can check the paths used by ```g++``` running the following command:
+```
+$ g++ -E -xc++ - -v < /dev/null
+```
+
+The following lines show the include paths:
+```
+...
+#include <...> search starts here:
+ /usr/include/c++/9
+ /usr/include/x86_64-linux-gnu/c++/9
+ /usr/include/c++/9/backward
+ /usr/lib/gcc/x86_64-linux-gnu/9/include
+ /usr/local/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+...
+```
+
+In this case, including ```/usr/include/c++/9``` and ```/usr/include/x86_64-linux-gnu/c++/9``` as include paths was enough to solve the error:
+```
+export CPLUS_INCLUDE_PATH=/usr/include/c++/9:/usr/include/x86_64-linux-gnu/c++/9
+```
+
+You can insert this export at your ```.bashrc/.zshrc/etc.``` to make it permanent.
+
 
 ## Acknowledgments
 
