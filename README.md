@@ -37,6 +37,8 @@ For more information regarding Lina, please refer to our paper (see Section **Pu
 9. [Troubleshooting](#troubleshooting)
 	1. ["is private within this context"](#is-private-within-this-context)
 	2. [Problems with Parallel Compilation](#problems-with-parallel-compilation)
+	3. [subprocess.CalledProcessError: Command ... returned non-zero exit status 2](#subprocesscalledprocesserror-command--returned-non-zero-exit-status-2)
+	4. [Lina's bundled clang fails to find basic headers (e.g. "fatal error: 'cstdlib' file not found")](#linas-bundled-clang-fails-to-find-basic-headers-eg-fatal-error-cstdli-file-not-found)
 10. [Acknowledgments](#acknowledgments)
 
 ## Versions
@@ -887,9 +889,9 @@ make
 
 Then, the following compilations will work normally with ```-j2```, ```-j3```, etc. There should be no problems if you only manipulate the source files inside Lina.
 
-### subprocess.CalledProcessError: Command '['make', 'linked_opt.bc']' returned non-zero exit status 2
+### subprocess.CalledProcessError: Command ... returned non-zero exit status 2
 
-The run.py script may throw exceptions if the spawned subprocesses fail. For specific information, one can check the output files that are located at ```workspace/<EXPERIMENT>/<KERNEL>/base```. *Note that these are only generated if run.py is not running in silent mode (i.e. not running with *```SILENT=yes```* argument.* The files are:
+The run.py script may throw exceptions if the spawned subprocesses fail. For specific information, one can check the output files that are located at ```workspace/<EXPERIMENT>/<KERNEL>/base```. **Note that these are only generated if run.py is not running in silent mode (i.e. not running with **```SILENT=yes```** argument.** The files are:
 
 * *make.out:* generated during compilation of the input kernel codes, through *generate* command;
 * *lina.trace.out:* output from Lina during trace;
