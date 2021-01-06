@@ -891,7 +891,7 @@ Then, the following compilations will work normally with ```-j2```, ```-j3```, e
 
 ### subprocess.CalledProcessError: Command ... returned non-zero exit status 2
 
-The run.py script may throw exceptions if the spawned subprocesses fail. For specific information, one can check the output files that are located at ```workspace/<EXPERIMENT>/<KERNEL>/base```. **Note that these are only generated if run.py is not running in silent mode (i.e. not running with ** ```SILENT=yes``` ** argument.** The files are:
+The run.py script may throw exceptions if the spawned subprocesses fail. For specific information, one can check the output files that are located at ```workspace/<EXPERIMENT>/<KERNEL>/base```. **Note that these are only generated if run.py is not running in silent mode (i.e. not running with **```SILENT=yes```** argument.** The files are:
 
 * **make.out:** generated during compilation of the input kernel codes through **generate** command;
 * **lina.trace.out:** output from Lina during trace;
