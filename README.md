@@ -69,7 +69,7 @@ PolyBench/C kernels are used in ```misc/smalldse``` and ```misc/largedse```, whi
 
 Refer to our paper for a detailed description of the contributions presented in Lina (also if you use Lina in your research, please kindly cite this paper):
 
-* A. Bannwart Perina, A. Silitonga, J. Becker and V. Bonato, "Fast Resource and Timing Aware Design Optimisation for High-Level Synthesis," in IEEE Transactions on Computers, doi: 10.1109/TC.2021.3112260.
+* A. Bannwart Perina, A. Silitonga, J. Becker and V. Bonato, "Fast Resource and Timing Aware Design Optimisation for High-Level Synthesis," in IEEE Transactions on Computers, doi: [10.1109/TC.2021.3112260](https://doi.org/10.1109/TC.2021.3112260).
 
 A much simpler validation with an early version of Lina was presented in our FPT-2019 paper (see [Versions](#versions) for more information):
 
@@ -538,7 +538,7 @@ When cache is active, Lina will search for a file named ```<WORKDIR>/futurecache
 
 ## Perform an Exploration
 
-***NOTE: This section describes how to perform an exploration using a newer DSE infrastructure. To use the small DSE tools from the FPT-2019 paper, please see **Perform a Small Exploration** section from the older README.md (https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md).***
+***NOTE: This section describes how to perform an exploration using a newer DSE infrastructure. To use the small DSE tools from the FPT-2019 paper, please see [this](https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md#perform-a-small-exploration) section from the older README.md (https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md).***
 
 We made available in folder ```misc/largedse``` the DSE infrastructure that we used to validate Lina. The PolyBench/C kernels used are available in the folder ```misc/largedse/hls``` and ```misc/largedse/fullsyn```. The ```hls``` experiment holds kernels that are created to be compared against Vivado HLS results, whereas the ```fullsyn``` kernels are tailored to be compared against SDSoC results.
 
@@ -737,7 +737,7 @@ In order to explore a kernel not included in the repository, do as follows (plea
 
 ### JSON Description File
 
-The ```run.py``` script uses a JSON description file to define several exploration parameters for one kernel. It defines the platform to be used, description of loops, arrays and which knobs should be explored. See the previous section (step 3) for an example of such file.
+The ```run.py``` script uses a JSON description file to define several exploration parameters for one kernel. It defines the platform to be used, description of loops, arrays and which knobs should be explored. See the [previous](#setting-up-a-new-exploration) section (step 3) for an example of such file.
 
 The required information are:
 
