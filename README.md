@@ -844,7 +844,7 @@ Several points of the code must be adjusted if you want to insert a new platform
 			* ***makefiles:*** Makefiles used by Lina or Vivado;
 			* ***parsers:*** parser scripts used by the main python script;
 			* ***project:*** C projects prepared for Lina;
-			* ***traces:*** folder where all traces should be placed (please see [Perform a Small Exploration](#perform-a-small-exploration));
+			* ***traces:*** folder where all traces should be placed (please see [Perform a Small Exploration](https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md#perform-a-small-exploration) from old README.md);
 			* ***vivadoprojs:*** C projects prepared for Vivado;
 		* ***csvs:*** folder where the results for each design point is saved as CSV;
 		* ***processedResults:*** automatic spreadsheets that provide results according to the CSV files;
@@ -854,7 +854,7 @@ Several points of the code must be adjusted if you want to insert a new platform
 		* ***runall.sh:*** call ```vai.py``` several times to perform small exploration with Lina;
 		* ***runallvivado.sh:*** call ```vivai.py``` several times to perform small exploration with Vivado;
 	* ***compiler.sh:*** automatic Lina compiler script (please see [Automatic Compilation](#automatic-compilation));
-	* ***compiler.2_updlat.sh:*** automatic compiler script for the ```2_updlat``` version of Lina (older version from branch ```2_updlat```, [Perform a Small Exploration](#perform-a-small-exploration)).
+	* ***compiler.2_updlat.sh:*** automatic compiler script for the ```2_updlat``` version of Lina (older version from branch ```2_updlat```, see [Perform a Small Exploration](https://github.com/comododragon/lina/blob/d85c4a49019027a41970b5e11aa14558951efe35/README.md#perform-a-small-exploration) from old README.md).
 
 ## Troubleshooting
 
