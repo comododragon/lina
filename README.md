@@ -12,7 +12,7 @@ Lina is an expansion of the Lin-Analyzer project (see https://github.com/zhguanw
 * A Non-Perfect Loop Analysis (NPLA), which allows a finer estimation of non-perfect loop nests by generating DDDGs for different segments of the loop nest;
 * A comprehensive resource estimation that considers the usage of integer FUs, floating-point FUs, supporting computations (e.g. loop/array indexing), intermediate registers, multiplexing and memory related resources (e.g. distributed RAM or completetly partitioned arrays).
 
-For more information regarding Lina, please refer to our paper (see Section **Publications**).
+For more information regarding Lina, please refer to our paper (see [Publications](#publications)).
 
 ## Table of Contents
 
@@ -73,11 +73,11 @@ Refer to our paper for a detailed description of the contributions presented in 
 
 A much simpler validation with an early version of Lina was presented in our FPT-2019 paper (see [Versions](#versions) for more information):
 
-* A. Bannwart Perina, J. Becker and V. Bonato, "Lina: Timing-Constrained High-Level Synthesis Performance Estimator for Fast DSE," 2019 International Conference on Field-Programmable Technology (ICFPT), 2019, pp. 343-346, doi: 10.1109/ICFPT47387.2019.00063.
+* A. Bannwart Perina, J. Becker and V. Bonato, "Lina: Timing-Constrained High-Level Synthesis Performance Estimator for Fast DSE," 2019 International Conference on Field-Programmable Technology (ICFPT), 2019, pp. 343-346, doi: [10.1109/ICFPT47387.2019.00063](https://doi.org/10.1109/ICFPT47387.2019.00063).
 
 Several parts of Lina were inherited from Lin-analyzer. For more information about Lin-analyzer, please see:
 
-* G. Zhong, A. Prakash, Y. Liang, T. Mitra and S. Niar, "Lin-Analyzer: A high-level performance analysis tool for FPGA-based accelerators," 2016 53nd ACM/EDAC/IEEE Design Automation Conference (DAC), 2016, pp. 1-6, doi: 10.1145/2897937.2898040.
+* G. Zhong, A. Prakash, Y. Liang, T. Mitra and S. Niar, "Lin-Analyzer: A high-level performance analysis tool for FPGA-based accelerators," 2016 53nd ACM/EDAC/IEEE Design Automation Conference (DAC), 2016, pp. 1-6, doi: [10.1145/2897937.2898040](https://doi.org/10.1145/2897937.2898040).
 
 ## Setup
 
@@ -123,7 +123,7 @@ If ```no such file or directory``` appears, there are a couple of options:
 
 ## Compilation
 
-You can either compile Lina by using the automated compiling script, or manually by following the instructions presented in Section **Manual Compilation**.
+You can either compile Lina by using the automated compiling script, or manually by following the instructions presented in [Manual Compilation](#manual-compilation).
 
 ### Automatic Compilation
 
@@ -131,7 +131,7 @@ We have provided an automated BASH compilation script at ```misc/compiler.sh```.
 
 To use automatic compilation:
 
-1. Make sure you read and understood the Section **Setup** (in other words, make sure that you have ```gcc```, ```zlib```, ```git``` and ```cmake```);
+1. Make sure you read and understood the [Setup](#setup) (in other words, make sure that you have ```gcc```, ```zlib```, ```git``` and ```cmake```);
 2. Download the automated compilation script at ```misc/compiler.sh```(https://raw.githubusercontent.com/comododragon/lina/master/misc/compiler.sh);
 3. Create a folder where you wish to compile everything (for example purposes, we will refer this path as ```/path/to/lina```) and place the compiler script inside;
 4. Give execution permission to ```compiler.sh```:
@@ -144,16 +144,16 @@ To use automatic compilation:
 	```
 6. Follow the instructions on-screen;
 	* The script will download LLVM, CLANG, BOOST and Lina, prepare the folders and execute ```cmake```;
-	* It will ask before compiling if you want to apply some patches. Please read Section **Troubleshooting** for better understanding. In doubt, just press ENTER and the patches will be ignored. If compilation fails, you will have another chance to apply the patches;
+	* It will ask before compiling if you want to apply some patches. Please read [Troubleshooting](#troubleshooting) for better understanding. In doubt, just press ENTER and the patches will be ignored. If compilation fails, you will have another chance to apply the patches;
 	* **Every time the script is executed, the whole operation is re-executed (i.e. no incremental compilation with the script!);**
-	* Right after ```cmake``` and before starting the whole compilation process, the script will give you the option to abort the script and leave the project as is. At this point you will have the project ready to be compiled, where you can insert your modifications or fix some system-related problems regarding dependencies. Then, simply follow Section **Manual Compilation** from step **10**;
+	* Right after ```cmake``` and before starting the whole compilation process, the script will give you the option to abort the script and leave the project as is. At this point you will have the project ready to be compiled, where you can insert your modifications or fix some system-related problems regarding dependencies. Then, simply follow [Manual Compilation](#manual-compilation) from step **10**;
 	* If everything goes right, you should have the ```lina``` binary at ```/path/to/lina/build/bin/lina```.
 
 ### Manual Compilation
 
 The automatic compilation script simply executes the following steps:
 
-1. Make sure you read and understood the Section ***Setup*** (in other words, make sure that you have ```gcc```, ```zlib```, ```git``` and ```cmake```);
+1. Make sure you read and understood the [Setup](#setup) (in other words, make sure that you have ```gcc```, ```zlib```, ```git``` and ```cmake```);
 2. Create your compilation folder and ```cd``` to it:
 	```
 	$ mkdir /path/to/lina
@@ -206,7 +206,7 @@ The automatic compilation script simply executes the following steps:
 	```
 	$ make
 	```
-11. If everything goes well, you will have the Lina binary at ```path/to/lina/build/bin```. If not, please see Section ***Troubleshooting***.
+11. If everything goes well, you will have the Lina binary at ```path/to/lina/build/bin```. If not, please see [Troubleshooting](#troubleshooting).
 
 ## Usage
 
@@ -225,7 +225,7 @@ $ lina -h
 Calling ```lina -h``` will show you the help, which is pretty self-explanatory. The most important flags are:
 
 * ```-h```: to show you the pretty help text;
-* ```-c FILE``` or ```--config-file=FILE```: use ```FILE``` as the configuration file. See Section ***Configuration File***;
+* ```-c FILE``` or ```--config-file=FILE```: use ```FILE``` as the configuration file. See [Configuration File](#configuration-file);
 * ```-m MODE``` or ```--mode=MODE```: set ```MODE``` as the execution mode of Lina. Three values are possible:
 	* ```all```: execute traced execution and performance estimation;
 	* ```trace```: execute only traced execution, generating the dynamic trace. Lina hangs before performance estimation;
@@ -277,7 +277,7 @@ int main(void) {
 	$ export PATH=/path/to/lina/build/bin:$PATH
 	```
 2. Create a folder for your Lina project, create a file ```test.cpp``` and insert the contents of the code above;
-3. Now we create a configuration file for this project, which will inform Lina the size of each array and also optimisation directives. Let's create a file ```config.cfg``` and enable partial loop unrolling with factor 4 on both loops (please see Section ***Configuration File*** for more information about this file):
+3. Now we create a configuration file for this project, which will inform Lina the size of each array and also optimisation directives. Let's create a file ```config.cfg``` and enable partial loop unrolling with factor 4 on both loops (please see [Configuration File](#configuration-file) for more information about this file):
 	```
 	array,A,4096,4
 	array,x,128,4
@@ -546,7 +546,7 @@ Some kernels were slightly modified in order to be compatible with Lina. See ```
 
 Lets perform an exploration on the ```bicg``` kernel from ```hls``` as an example:
 
-1. Compile Lina following the instructions from Sections ***Setup*** and ***Compilation***;
+1. Compile Lina following the instructions from [Setup](#setup) and [Compilation](#compilation);
 	* We will refer to the path for this version as ```/path/to/lina/build/bin```;
 2. You will also need Python 3. Please install it using your OS repository. For example in Ubuntu:
 	```
@@ -844,7 +844,7 @@ Several points of the code must be adjusted if you want to insert a new platform
 			* ***makefiles:*** Makefiles used by Lina or Vivado;
 			* ***parsers:*** parser scripts used by the main python script;
 			* ***project:*** C projects prepared for Lina;
-			* ***traces:*** folder where all traces should be placed (please see Section ***Perform a Small Exploration***);
+			* ***traces:*** folder where all traces should be placed (please see [Perform a Small Exploration](#perform-a-small-exploration));
 			* ***vivadoprojs:*** C projects prepared for Vivado;
 		* ***csvs:*** folder where the results for each design point is saved as CSV;
 		* ***processedResults:*** automatic spreadsheets that provide results according to the CSV files;
@@ -853,8 +853,8 @@ Several points of the code must be adjusted if you want to insert a new platform
 		* ***vivai.py:*** main python script for one design point with Vivado
 		* ***runall.sh:*** call ```vai.py``` several times to perform small exploration with Lina;
 		* ***runallvivado.sh:*** call ```vivai.py``` several times to perform small exploration with Vivado;
-	* ***compiler.sh:*** automatic Lina compiler script (please see Section ***Automatic Compilation***);
-	* ***compiler.2_updlat.sh:*** automatic compiler script for the ```2_updlat``` version of Lina (older version from branch ```2_updlat```, see Section ***Perform a Small Exploration***).
+	* ***compiler.sh:*** automatic Lina compiler script (please see [Automatic Compilation](#automatic-compilation));
+	* ***compiler.2_updlat.sh:*** automatic compiler script for the ```2_updlat``` version of Lina (older version from branch ```2_updlat```, [Perform a Small Exploration](#perform-a-small-exploration)).
 
 ## Troubleshooting
 
