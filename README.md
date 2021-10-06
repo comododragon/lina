@@ -18,28 +18,29 @@ For more information regarding Lina, please refer to our paper (see Section **Pu
 
 1. [Versions](#versions)
 2. [Licence](#licence)
-3. [Setup](#setup)
-4. [Compilation](#compilation)
+3. [Publications](#publications)
+4. [Setup](#setup)
+5. [Compilation](#compilation)
 	1. [Automatic Compilation](#automatic-compilation)
 	2. [Manual Compilation](#manual-compilation)
-5. [Usage](#usage)
+6. [Usage](#usage)
 	1. [Use by Example](#use-by-example)
 	2. [Configuration File](#configuration-file)
 	3. [Enabling Design Space Exploration](#enabling-design-space-exploration)
 		1. [Trace Cache](#trace-cache)
-6. [Perform an Exploration](#perform-an-exploration)
+7. [Perform an Exploration](#perform-an-exploration)
 	1. [The Script](#the-script)
 	2. [Setting Up a New Exploration](#setting-up-a-new-exploration)
 	3. [JSON Description File](#json-description-file)
-7. [Supported Platforms](#supported-platforms)
+8. [Supported Platforms](#supported-platforms)
 	1. [Adding a New Platform](#adding-a-new-platform)
-8. [Files Description](#files-description)
-9. [Troubleshooting](#troubleshooting)
+9. [Files Description](#files-description)
+10. [Troubleshooting](#troubleshooting)
 	1. ["is private within this context"](#is-private-within-this-context)
 	2. [Problems with Parallel Compilation](#problems-with-parallel-compilation)
 	3. [subprocess.CalledProcessError: Command ... returned non-zero exit status 2](#subprocesscalledprocesserror-command--returned-non-zero-exit-status-2)
 	4. [Lina's bundled clang fails to find basic headers (e.g. "fatal error: 'cstdlib' file not found")](#linas-bundled-clang-fails-to-find-basic-headers-eg-fatal-error-cstdlib-file-not-found)
-10. [Acknowledgments](#acknowledgments)
+11. [Acknowledgments](#acknowledgments)
 
 ## Versions
 
@@ -63,6 +64,20 @@ According to Lin-Analyzer repository: *"Dynamic data graph generation (DDDG) and
 The ```common.h``` header is distributed under the GPL-3.0 licence. See the following repo for details: https://github.com/comododragon/commonh
 
 PolyBench/C kernels are used in ```misc/smalldse``` and ```misc/largedse```, which follows the GPL-2.0 licence. Please see: https://sourceforge.net/projects/polybench/
+
+## Publications
+
+Refer to our paper for a detailed description of the contributions presented in Lina (also if you use Lina in your research, please kindly cite this paper):
+
+* A. Bannwart Perina, A. Silitonga, J. Becker and V. Bonato, "Fast Resource and Timing Aware Design Optimisation for High-Level Synthesis," in IEEE Transactions on Computers, doi: 10.1109/TC.2021.3112260.
+
+A much simpler validation with an early version of Lina was presented in our FPT-2019 paper (see [Versions](#versions) for more information):
+
+* A. Bannwart Perina, J. Becker and V. Bonato, "Lina: Timing-Constrained High-Level Synthesis Performance Estimator for Fast DSE," 2019 International Conference on Field-Programmable Technology (ICFPT), 2019, pp. 343-346, doi: 10.1109/ICFPT47387.2019.00063.
+
+Several parts of Lina were inherited from Lin-analyzer. For more information about Lin-analyzer, please see:
+
+* G. Zhong, A. Prakash, Y. Liang, T. Mitra and S. Niar, "Lin-Analyzer: A high-level performance analysis tool for FPGA-based accelerators," 2016 53nd ACM/EDAC/IEEE Design Automation Conference (DAC), 2016, pp. 1-6, doi: 10.1145/2897937.2898040.
 
 ## Setup
 

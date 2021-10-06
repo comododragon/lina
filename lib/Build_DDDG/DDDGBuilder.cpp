@@ -1319,6 +1319,7 @@ intervalTy DDDGBuilder::getTraceLineFromTo(gzFile &traceFile) {
 		gzrewind(traceFile);
 	}
 #else
+	gzrewind(traceFile);
 #endif
 
 #ifdef FUTURE_CACHE
