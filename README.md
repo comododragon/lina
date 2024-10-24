@@ -44,6 +44,8 @@ For more information regarding Lina, please refer to our paper (see [Publication
 
 ## Versions
 
+This repository refers to a variant of Lina known as Mark 1.
+
 There are two versions of Lina in this repository:
 
 * The Lina version used in the FPT-2019 paper does not implement the most recent fine tuning and also the resource estimation part. To use this version of the tool, please refer to commit d85c4a4 (https://github.com/comododragon/lina/tree/d85c4a49019027a41970b5e11aa14558951efe35) or run:
@@ -54,6 +56,10 @@ There are two versions of Lina in this repository:
 * For the version of Lina including the resource estimation, you can use the most recent commit
 
 **Unless there is a valid reason to use the older repository (e.g. to understand the results from FPT-2019 paper), please use the most recent version for a refined estimation and performance optimisations.**
+
+### Mark 2
+
+Lina Mark 2 is an updated version that contains many updates, such as an off-chip memory model. This variant is located [here](https://github.com/comododragon/linaii).
 
 ## Licence
 
@@ -67,9 +73,20 @@ PolyBench/C kernels are used in ```misc/smalldse``` and ```misc/largedse```, whi
 
 ## Publications
 
-Refer to our paper for a detailed description of the contributions presented in Lina (also if you use Lina in your research, please kindly cite this paper):
+Refer to our papers for detailed descriptions of the contributions presented in Lina (also if you use Lina in your research, please kindly cite one or more papers below):
 
-* A. Bannwart Perina, A. Silitonga, J. Becker and V. Bonato, "Fast Resource and Timing Aware Design Optimisation for High-Level Synthesis," in IEEE Transactions on Computers, doi: [10.1109/TC.2021.3112260](https://doi.org/10.1109/TC.2021.3112260).
+**Lina Mark 1 (this repository):**
+
+* A. Bannwart Perina, A. Silitonga, J. Becker and V. Bonato, "Fast Resource and Timing Aware Design Optimisation for High-Level Synthesis," in IEEE Transactions on Computers, 2021, doi: [10.1109/TC.2021.3112260](https://doi.org/10.1109/TC.2021.3112260).
+
+**Lina [Mark 2](https://github.com/comododragon/linaii):**
+
+* A. Bannwart Perina, J. Becker and V. Bonato (in press), "Memory Aware Design Optimisation for High-Level Synthesis," in Journal of Signal Processing Systems, 2024, doi: **IN PRESS**.
+	* In press, please wait for further updates.
+
+**Thesis (contains Mark 1, and most of Mark 2 except `cachedaemon`):**
+
+* A. Bannwart Perina, "Lina: a fast design optimisation tool for software-based FPGA programming," doctoral dissertation, Universidade de São Paulo, 2022, doi: [10.11606/T.55.2022.tde-23082022-101507](https://doi.org/10.11606/T.55.2022.tde-23082022-101507).
 
 A much simpler validation with an early version of Lina was presented in our FPT-2019 paper (see [Versions](#versions) for more information):
 
