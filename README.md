@@ -81,8 +81,7 @@ Refer to our papers for detailed descriptions of the contributions presented in 
 
 **Lina [Mark 2](https://github.com/comododragon/linaii):**
 
-* A. Bannwart Perina, J. Becker and V. Bonato (in press), "Memory Aware Design Optimisation for High-Level Synthesis," in Journal of Signal Processing Systems, 2024, doi: **IN PRESS**.
-	* In press, please wait for further updates.
+* A. Bannwart Perina, J. Becker and V. Bonato, "Memory Aware Design Optimisation for High-Level Synthesis," in Journal of Signal Processing Systems, 2024, doi: [10.1007/s11265-024-01938-3](https://doi.org/10.1007/s11265-024-01938-3).
 
 **Thesis (contains Mark 1, and most of Mark 2 except `cachedaemon`):**
 
